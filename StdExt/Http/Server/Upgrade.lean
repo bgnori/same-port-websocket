@@ -1,7 +1,7 @@
 /-
 Extension proposal for `Std.Http.Server`: a connection-handoff (upgrade) API.
 
-Design (see docs/websocket-risk-return-report.md, appendix A.5):
+Design (see docs/application-study/websocket-risk-return-report.md, appendix A.5):
 - A.3 (Warp `responseRaw`): the handler result type gains one extra constructor
   carrying "status line + headers + a continuation receiving a bidirectional
   stream", without breaking the `Request → Response` abstraction. Like Warp, an

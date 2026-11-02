@@ -5,7 +5,7 @@ proposed upstream.
 
 - `StdExt.Http.Server.*` — a connection-handoff (upgrade) API for
   `Std.Http.Server`, designed after the survey in
-  docs/websocket-risk-return-report.md (appendix A).
+  docs/application-study/websocket-risk-return-report.md (appendix A).
 - `StdExt.Http.WebSocket*` — an RFC 6455 WebSocket implementation layered on
   the handoff API.
 
