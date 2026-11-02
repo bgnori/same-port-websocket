@@ -87,12 +87,13 @@ private def closeFrame (code : UInt16) (reason : String) : Frame := Id.run do
   let mut payload := ByteArray.empty
   payload := payload.push (code >>> 8).toUInt8
   payload := payload.push code.toUInt8
-  let mut reasonBytes := reason.toUTF8
-  while reasonBytes.size > 123 do
-    reasonBytes := reasonBytes.extract 0 (reasonBytes.size - 1)
-    while reasonBytes.size > 0 ∧ reasonBytes[reasonBytes.size - 1]! &&& 0xC0 == 0x80 do
-      reasonBytes := reasonBytes.extract 0 (reasonBytes.size - 1)
-  return { opcode := .close, payload := payload ++ reasonBytes }
+  let reasonBytes := reason.toUTF8
+  let mut endPos := min reasonBytes.size 123
+  if endPos < reasonBytes.size then
+    -- If the first excluded byte is a continuation, exclude its whole character.
+    while endPos > 0 ∧ reasonBytes[endPos]! &&& 0xC0 == 0x80 do
+      endPos := endPos - 1
+  return { opcode := .close, payload := payload ++ reasonBytes.extract 0 endPos }
 
 /--
 Sends a close frame once; later send attempts are rejected.
