@@ -187,10 +187,23 @@ Origin欠落だけを許可している。TLS終端やCodespaces転送先で使�
   断片間の制御フレーム、Ping/Pong、クローズハンドシェイク、先読みバイトの
   移譲、keep-alive 後の upgrade、並行接続、拒否応答(405/400/426/403)、
   プロトコル違反時の 1002/1007 切断、切断後の HTTP 継続稼働。
+- **Autobahn 互換性**([tests/test_ws_autobahn.py](../../tests/test_ws_autobahn.py)、
+  標準ライブラリーのみ、28 ケース・2026-11-03 全通過):
+  [Autobahn|Testsuite](https://github.com/crossbario/autobahn-testsuite) の
+  ケースクラス 1〜7・9 の代表的挙動を再実装した準拠スイート。
+  長さ境界(0〜64 KiB 超)の echo、Pong の順序と payload 一致、RSV ビット、
+  予約 opcode、多数・空断片の再構成、断片越しの UTF-8 検証(1007)、
+  有効・無効クローズコードの echo/拒否(1002)、close 後データの無視、
+  1 MiB 上限ちょうどの echo と超過時の 1009。
+  本家スイートは Docker 専用のため、Docker がある環境向けの実行構成を
+  [tools/autobahn/](../../tools/autobahn/README.md)に同梱する
+  (`bash tests/autobahn.sh`)。除外ケース(1 MiB 超の 9.x、未実装の
+  permessage-deflate 12/13)の根拠も同所に記録。
 
 ```sh
 lake build && lake test
 python3 -m unittest tests.test_ws_std
+python3 -m unittest discover -s tests -p 'test_ws_autobahn.py'
 ```
 
 ## 5. 制約と今後

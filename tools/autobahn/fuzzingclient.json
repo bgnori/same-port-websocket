@@ -1,0 +1,17 @@
+{
+  "outdir": "/reports/ws-echo",
+  "servers": [
+    {
+      "agent": "LeanWebStudy-StdExt",
+      "url": "ws://127.0.0.1:8090/ws-echo/socket"
+    }
+  ],
+  "cases": ["*"],
+  "exclude-cases": [
+    "9.1.4", "9.1.5", "9.1.6",
+    "9.2.4", "9.2.5", "9.2.6",
+    "9.3.*", "9.4.*",
+    "12.*", "13.*"
+  ],
+  "exclude-agent-cases": {}
+}

@@ -18,7 +18,7 @@ Std拡張として実装・検証する。
 | 区分 | 状態 |
 |---|---|
 | 現行実装 | StdExtのHTTP/1 upgrade、WebSocketフレーム・メッセージAPI、echo実証がある |
-| 修正・検証済み | Close理由のUTF-8切断を修正。既存のLean・通信テストの検証記録がある |
+| 修正・検証済み | Close理由のUTF-8切断を修正。既存のLean・通信テストの検証記録がある。Autobahn型準拠スイート（ケースクラス1〜7・9の再実装、28ケース）が2026-11-03に全通過し、本家Testsuite用のDocker実行構成を[tools/autobahn/](../../tools/autobahn/README.md)に同梱 |
 | 採用した設計 | 単一owner、Bの直積状態・操作台帳 + Cの最小保持不変条件 |
 | 合意した動作原則 | 正常closeは受理済み列を排出。ピアClose・障害・abortは未着手取消。取消・期限をI/O停止・回収完了と混同しない。終了責任の分担（D2）とsend/closeの利用者向け意味論（D3）は2026-11-03に承認済み |
 | 純粋モデル試作 | 七つの局所補題（終端性・write排他の帰納的保存を含む）、30超の入力列、深さ5・20,020ノードの探索。`lake test`成功 |
@@ -78,6 +78,7 @@ ws-leanと他言語の主要実装を同程度の補完資料とする。
 - [LifecycleUpgradeTests](../../LeanWebStudy/LifecycleUpgradeTests.lean)：実`serveUpgradable`サーバー上のWebSocket接続（段階C第4スライス）。
 - [Leanテスト入口](../../LeanWebStudyTests.lean)：アプリのテストと実行単位を共有。
 - [通信テスト](../../tests/test_ws_std.py)：現行echo経路の検証。純粋モデルの適合証明ではない。
+- [Autobahn型準拠テスト](../../tests/test_ws_autobahn.py)：プロトコル互換性の検証。本家Testsuiteの実行構成は[tools/autobahn/](../../tools/autobahn/README.md)。
 
 ```sh
 lake build LeanWebStudy.LifecycleTests LeanWebStudy.MockExecutorTests LeanWebStudy.AsyncExecutorTests
