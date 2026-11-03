@@ -154,9 +154,9 @@ sendとcloseの競合について利用者に約束するのは、内部lock/own
 呼出開始時刻の先後ではなく内部の直列化順で勝者が決まる。close前に受理したsendは送信を試みるが、
 closeの復帰後に失敗が判明することがある。送信成功はpeerの受信確認を意味しない。
 
-この意味論は現行実装の説明ではなく、確認待ちの契約案である。現在のWebSocket層には
+この意味論は現行実装の説明ではなく、承認済み（2026-11-03）の契約である。現在のWebSocket層には
 send/closeを直列化する仕組みがなく、close frame後のdata frame競合が記録されている。
-契約を採用する場合は、Std TCP/libuvでのwrite順序・buffer寿命、任意Transportでの保証範囲、
+実装にあたり、Std TCP/libuvでのwrite順序・buffer寿命、任意Transportでの保証範囲、
 既存利用者にとっての挙動差を確認する。実装方式はこの確認後に決め、内部方式を利用者向け契約にしない。
 
 ### 4.2 gracefulとabortを分ける理由
