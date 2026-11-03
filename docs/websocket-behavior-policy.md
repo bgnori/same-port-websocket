@@ -276,7 +276,7 @@ HTTP/1の再利用終了とWebSocketのClose交換に固有の手順があるこ
 大規模実験からではなく、既存実装の制限・既定値からの見積りとして定める。
 第6節の方針どおり他ライブラリの既定値をそのまま輸入せず、
 本拡張の既存設定と保持量の整合を判断基準にした。採用値は
-[Lifecycle.Limits.default](../../StdExt/Http/WebSocket/Lifecycle.lean)に実装している。
+[Lifecycle.Limits.default](../StdExt/Http/WebSocket/Lifecycle.lean)に実装している。
 
 調査した既定値（2026-11-03参照。設定名は各実装の公開文書による）:
 
@@ -351,9 +351,9 @@ stable/latestおよびWeb標準は更新され得る公開契約であり、固�
 - [L4] [Lean 4.35.0: ContextAsync](https://github.com/leanprover/lean4/blob/v4.35.0/src/Std/Async/ContextAsync.lean#L15)
 - [L5] [Lean 4.35.0: Async.race](https://github.com/leanprover/lean4/blob/v4.35.0/src/Std/Async/Basic.lean#L940)
 - [L6] [ws-lean固定版: Connection](https://github.com/pb64-lean/ws-lean/blob/2a6665a120993533122bcbfa076ef35c17025bea/Ws/Connection.lean)（submitDataOpenIO: 279行、submitClose: 390行、writerLoop: 584行、close/wait: 1377行以降）
-- [L7] [本拡張: Connection](../../StdExt/Http/WebSocket/Connection.lean)
-- [L8] [本拡張: serveUpgradable](../../StdExt/Http/Server/Serve.lean)
-- [L9] [本拡張: upgrade継続の型](../../StdExt/Http/Server/Upgrade.lean)、[performUpgradeと接続終了処理](../../StdExt/Http/Server/Connection.lean)
+- [L7] [本拡張: Connection](../StdExt/Http/WebSocket/Connection.lean)
+- [L8] [本拡張: serveUpgradable](../StdExt/Http/Server/Serve.lean)
+- [L9] [本拡張: upgrade継続の型](../StdExt/Http/Server/Upgrade.lean)、[performUpgradeと接続終了処理](../StdExt/Http/Server/Connection.lean)
 - [L10] [Lean 4.35.0: Transport.close](https://github.com/leanprover/lean4/blob/v4.35.0/src/Std/Http/Transport.lean#L45)
 - [L11] [Lean 4.35.0: HTTP接続の終了処理](https://github.com/leanprover/lean4/blob/v4.35.0/src/Std/Http/Server/Connection.lean#L530)
 - [L12] [Lean 4.35.0: TCP.Client.shutdown](https://github.com/leanprover/lean4/blob/v4.35.0/src/Std/Async/TCP.lean#L220)

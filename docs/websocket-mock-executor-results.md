@@ -11,7 +11,7 @@
 
 ### 1.1 制御操作の台帳化（モデル拡張）
 
-[Lifecycle](../../StdExt/Http/WebSocket/Lifecycle.lean)を拡張し、
+[Lifecycle](../StdExt/Http/WebSocket/Lifecycle.lean)を拡張し、
 `abortBackend`・`finishSend`を「意図のEffect」から、writeと同じ台帳管理の操作へ変えた。
 
 | 段階 | 表現 |
@@ -37,7 +37,7 @@ release後は`release`以外の全イベントを`.closed`で拒否する。
 
 ### 1.3 モック実行器
 
-[MockExecutor](../../StdExt/Http/WebSocket/MockExecutor.lean)は、
+[MockExecutor](../StdExt/Http/WebSocket/MockExecutor.lean)は、
 利用者呼出・owner判断・backend callbackを別々のCommandとして受け取り、
 モデルの`step`が返すEffectだけを実行する純粋・決定的なdriverである。
 
@@ -79,12 +79,12 @@ release後は`release`以外の全イベントを`.closed`で拒否する。
 
 ### 2.2 決定的テストと有界探索
 
-- [LifecycleTests](../../LeanWebStudy/LifecycleTests.lean):
+- [LifecycleTests](../StdExtTests/LifecycleTests.lean):
   入力列を制御操作台帳へ追随させ、制御操作の誤用（未登録完了・二重登録・
   未完了でのrelease・release後のpeerClose拒否）を追加。
   探索は制御イベントを加えた23種・深さ5で**20,020ノード**。
   不変条件に操作ID（write・read・control）の全体一意性を追加した。
-- [MockExecutorTests](../../LeanWebStudy/MockExecutorTests.lean):
+- [MockExecutorTests](../StdExtTests/MockExecutorTests.lean):
   Commandレベルの決定的シナリオ12件と、27コマンド・深さ5の
   **37,305ノード**の探索。全ノードで`consistent`を検査し、
   mismatchゼロを確認した。

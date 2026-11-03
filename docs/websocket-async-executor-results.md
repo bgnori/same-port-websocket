@@ -11,7 +11,7 @@
 
 ## 1. 実装した範囲
 
-[AsyncExecutor](../../StdExt/Http/WebSocket/AsyncExecutor.lean)は、
+[AsyncExecutor](../StdExt/Http/WebSocket/AsyncExecutor.lean)は、
 `Lifecycle`純粋モデルを`Backend`能力レコード越しに実行する単一ownerのセッションである。
 段階Bのモック実行器（純粋）と異なり、ここでは**実I/Oを`Async`タスクとして起動し、
 その完了・失敗をモデルイベントとして戻す**。
@@ -52,7 +52,7 @@ mock transportの`close`が効いてもTCPで同じ中断が効くとは仮定�
 
 ## 3. 検証結果
 
-[AsyncExecutorTests](../../LeanWebStudy/AsyncExecutorTests.lean)で、
+[AsyncExecutorTests](../StdExtTests/AsyncExecutorTests.lean)で、
 実`Async`ランタイム（`Async.block`）上の3シナリオを検査した。
 各シナリオは実行後、記録した履歴を純粋モデルへ`replay`し、最終状態の一致を確認する。
 
@@ -105,7 +105,7 @@ graceful終了はピアの協力(Close応答またはEOF)で保留recvが自然�
 追加の中断能力を要求しない。期限後のabort経路については、素の`recv?`は中断不能だが、
 **readをselector経由(recvSelector＋cancel channel)にすればabortがピアの協力なしに
 保留readを速やかに回収し、sessionは有界時間でquietに達してreleaseできる**ことを
-実TCPで確認した([TcpBackendTests](../../LeanWebStudy/TcpBackendTests.lean)の
+実TCPで確認した([TcpBackendTests](../StdExtTests/TcpBackendTests.lean)の
 `cancellableTcpBackend`とprobe 5)。busyは恒久化しない。
 
 解放の順序は二層で維持する: owner所有の論理資源(queue・payload・待機者・新規受付)は
@@ -132,11 +132,11 @@ shutdown通知をcancel channel相当に配線する。HTTP/2は別adapterとし
   backend全体の終了（`backendDone`）とも区別する。cancelledは停止中のみ合法。
   failedはwrite失敗と同様にbackend障害として停止・abort予約を引き起こす。
   既存の7定理（終端性・write排他保存を含む）は変更後も成立する。
-- **フレーム層接続**: [FrameAdapter](../../StdExt/Http/WebSocket/FrameAdapter.lean)が
+- **フレーム層接続**: [FrameAdapter](../StdExt/Http/WebSocket/FrameAdapter.lean)が
   sans-I/Oフレーム層をSessionに接続する。**ピアCloseはフレーム解析結果から`peerClose`を
   発火**（従来はテストが手で注入）、**Ping自動応答のPongはアプリデータと同一の直列化
   送信経路に合流**するため、D3のClose順序契約が制御応答にも及ぶ。
-- **検証**: [FrameAdapterTests](../../LeanWebStudy/FrameAdapterTests.lean)が実TCP上で
+- **検証**: [FrameAdapterTests](../StdExtTests/FrameAdapterTests.lean)が実TCP上で
   マスク付きクライアントとしてecho・Ping→Pong・Closeハンドシェイク・半閉鎖・EOFを駆動し、
   記録履歴の純粋モデル再生一致を確認。モデル探索は読み完了4種を加えて25,129ノード、
   モック実行器探索は45,318ノード。
@@ -148,17 +148,17 @@ shutdown通知をcancel channel相当に配線する。HTTP/2は別adapterとし
 
 試作結果チェックリスト「HTTP/1 backendへ接続する」の接続ループ組み込みを実装した。
 
-- **`Lifecycle.Upgrade.upgrade`**（[LifecycleUpgrade](../../StdExt/Http/WebSocket/LifecycleUpgrade.lean)）:
+- **`Lifecycle.Upgrade.upgrade`**（[LifecycleUpgrade](../StdExt/Http/WebSocket/LifecycleUpgrade.lean)）:
   既存`WebSocket.upgrade`と対になるupgrade入口。ハンドシェイク検証後、
   `Upgraded`ストリーム上で`MessageSession`のowner echoループ（`echoOwner`）を動かす。
-  [LifecycleUpgradeTests](../../LeanWebStudy/LifecycleUpgradeTests.lean)が実`serveUpgradable`
+  [LifecycleUpgradeTests](../StdExtTests/LifecycleUpgradeTests.lean)が実`serveUpgradable`
   サーバーを起動し、実TCPクライアントがRFC 6455ハンドシェイク→echo→自動Pong→Close
   ハンドシェイクを完走。同一サーバーの通常HTTP（200）も確認した。
 
 - **終了契約の発見（重要）**: `Server.Upgraded`は**transport非依存でrecv/sendのみ公開し、
   half-closeもread取消も持たない**（Cowboy方式でsocketは継続へ渡らず、サーバーが
   `Transport.close`で後始末を所有する）。したがって`Upgraded`から作るbackendは、
-  実`Socket.Client`が持つabort能力（[TcpBackendTests](../../LeanWebStudy/TcpBackendTests.lean)）を
+  実`Socket.Client`が持つabort能力（[TcpBackendTests](../StdExtTests/TcpBackendTests.lean)）を
   提供できない。これを成功偽装せず正直に扱う:
   - `finishSend`はowner水準の「以後フレームを送らない」という約束を表す。モデルが
     既に強制しており（Close書込後は何もdispatchしない）、wire上のFINは継続return時の

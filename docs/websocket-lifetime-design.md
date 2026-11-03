@@ -32,15 +32,15 @@ upgrade後に複数タスクから操作できるようにしたことで、拡�
 
 ### 現在確認できる事実
 
-- [sendDataFrame](../../StdExt/Http/WebSocket/Connection.lean) は `closeSent` の確認と
+- [sendDataFrame](../StdExt/Http/WebSocket/Connection.lean) は `closeSent` の確認と
   送信を別操作として行う。確認後に別タスクがCloseを送り、その後データが送られる
   順序を排除できない。ピアのCloseへの自動応答とも競合し得る。
 - `sendCloseOnce` のフラグ更新は原子的だが、他の送信との直列化はしない。
   フラグはCloseの送信完了を意味せず、送信失敗時も単独では結果を表せない。
 - `WebSocket.close` はフレーム送信であって、オブジェクト解放でもTCP切断でもない。
-- [Upgraded.ofTransport](../../StdExt/Http/Server/Upgrade.lean) の送受信クロージャは
+- [Upgraded.ofTransport](../StdExt/Http/Server/Upgrade.lean) の送受信クロージャは
   socketへの参照を保持する。参照の生存と、接続を操作してよい期間は同一ではない。
-- [performUpgrade](../../StdExt/Http/Server/Connection.lean) は継続自身を待つが、
+- [performUpgrade](../StdExt/Http/Server/Connection.lean) は継続自身を待つが、
   継続がWebSocketを渡した独立タスクすべてを追跡・joinする仕組みではない。
 - Lean 4.35.0の `Transport.close` は既定で何もしない。標準のTCPインスタンスは
   これを上書きせず、FD解放をfinalizerに委ねる。したがって、現在の

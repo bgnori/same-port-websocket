@@ -146,11 +146,11 @@ HTTP接続継続性、突然切断まで24ケースをPython標準ライブラ�
 
 ### 現状と防御の範囲
 
-- [WebSocket.lean](../../StdExt/Http/WebSocket.lean) の `UpgradeOptions.checkOrigin` と、
+- [WebSocket.lean](../StdExt/Http/WebSocket.lean) の `UpgradeOptions.checkOrigin` と、
   直接呼び出せる `checkHandshake` の省略時引数は、どちらも `fun _ => true`。
   コールバックが受け取るのは `Option String` だけで、HostやTLS情報ではない。
   拒否すると101に切り替える前に403を返す。
-- 一方、[デモの `WebHandler.wsEchoOrigin`](../../LeanWebStudy.lean) は明示設定済みで、
+- 一方、[デモの `WebHandler.wsEchoOrigin`](https://github.com/bgnori/LeanWebStudy/blob/main/LeanWebStudy.lean) は明示設定済みで、
   `http://127.0.0.1:<httpPort>` と `http://localhost:<httpPort>` のみを許可する。
   Origin欠落は許可し、文字列 `"null"` や外部Originは拒否する。
   **ライブラリ既定値の問題と、デモの現在の挙動は区別する必要がある。**

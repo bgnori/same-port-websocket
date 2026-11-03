@@ -11,8 +11,8 @@ Autobahn|Testsuite以外の外部互換性テストを調査し、独立後の�
   CI（GitHub Actions）で本家をDockerでフル実行する。GitHub Actionsの`ubuntu-latest`は
   Dockerを備えるため、devcontainerで不可能だった本家実行がCIでは無理なく可能になる。
 - 本リポジトリに実装済みの資産はそのまま独立後も使う:
-  [stdlib準拠スイート](../../tests/test_ws_autobahn.py)（Docker不要の高速フィードバック）、
-  [tools/autobahn/](../../tools/autobahn/README.md)（本家の設定と除外根拠）。
+  [stdlib準拠スイート](../tests/test_ws_autobahn.py)（Docker不要の高速フィードバック）、
+  [tools/autobahn/](../tools/autobahn/README.md)（本家の設定と除外根拠）。
 - その他の候補は準拠スイートとしては不採用（下表）。一部は相互運用スモークや
   将来のHTTP/2段階の補完として採用余地を記録する。
 
@@ -40,7 +40,7 @@ Autobahn|Testsuite以外の外部互換性テストを調査し、独立後の�
 - **Python 2凍結**: 本家はPyPy2ベースのDocker imageを意図的に凍結しており、
   ベースimage更新は想定されていない。imageが取得・実行できる限り問題はないが、
   供給が途絶えた場合に備え、(1) 使用imageのダイジェスト固定、
-  (2) [stdlib準拠スイート](../../tests/test_ws_autobahn.py)の維持（本家のケースクラスを
+  (2) [stdlib準拠スイート](../tests/test_ws_autobahn.py)の維持（本家のケースクラスを
   追えるだけ広げる）、を手当てとする。
 - **採点とポリシーの不一致**: 1 MiB上限（D4）を超える9.x大型ケースは、サーバーが正しく
   `1009`を返してもwstestは失敗と採点する。独立後CIでは、既定設定の実行に加えて
@@ -56,9 +56,9 @@ Autobahn|Testsuite以外の外部互換性テストを調査し、独立後の�
 
 | 層 | 内容 | 移設元 |
 |---|---|---|
-| Lean純粋モデル・実行器 | `lake test`（lifecycle探索・mock実行器・実TCPプローブ・フレーム層・接続ループe2e） | [LeanWebStudyTests](../../LeanWebStudyTests.lean)からWebSocket関連のみ抽出 |
-| プロトコル結合試験 | stdlib Pythonの[test_ws_std.py](../../tests/test_ws_std.py)・[test_ws_autobahn.py](../../tests/test_ws_autobahn.py) | そのまま（アプリ依存なし。サーバー起動部のバイナリ名のみ変更） |
-| 本家Autobahn | GitHub ActionsでDocker実行（`--network host`、レポートをartifactに保存）。既定設定＋上限引き上げ設定の2ジョブ | [tools/autobahn/](../../tools/autobahn/README.md)を移設し、CI workflowを追加 |
+| Lean純粋モデル・実行器 | `lake test`（lifecycle探索・mock実行器・実TCPプローブ・フレーム層・接続ループe2e） | [LeanWebStudyTests](../Tests.lean)からWebSocket関連のみ抽出 |
+| プロトコル結合試験 | stdlib Pythonの[test_ws_std.py](../tests/test_ws_std.py)・[test_ws_autobahn.py](../tests/test_ws_autobahn.py) | そのまま（アプリ依存なし。サーバー起動部のバイナリ名のみ変更） |
+| 本家Autobahn | GitHub ActionsでDocker実行（`--network host`、レポートをartifactに保存）。既定設定＋上限引き上げ設定の2ジョブ | [tools/autobahn/](../tools/autobahn/README.md)を移設し、CI workflowを追加 |
 | 相互運用スモーク（任意） | 実在クライアント実装（curl `--ws`、Python `websockets`、Node `ws`）でecho・close往復のみ確認 | 新規。準拠はAutobahnに委ね、ここは「現実のクライアントと話せる」ことの確認に限定 |
 
 アプリ（chat・SQLite・lithe等）に依存するテストは移設しない。

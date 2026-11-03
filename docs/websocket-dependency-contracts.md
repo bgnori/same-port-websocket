@@ -198,7 +198,7 @@ native shutdownは重複要求を拒否するフラグを持ち、完了までso
 
 ### C8. 実測: 実TCPでの保留recvの解決とabort能力（2026-11-03）
 
-[TcpBackendTests](../../LeanWebStudy/TcpBackendTests.lean)で、loopback上の実socket対に
+[TcpBackendTests](../StdExtTests/TcpBackendTests.lean)で、loopback上の実socket対に
 対して以下を実行・確認した（`lake test`に組み込み）。実測は当該環境・当該版での
 挙動確認であり、全プラットフォームの保証ではない。
 

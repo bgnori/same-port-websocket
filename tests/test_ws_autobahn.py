@@ -46,7 +46,7 @@ class AutobahnStyleTests(unittest.TestCase):
             reservation.bind(("127.0.0.1", 0))
             cls.http_port = reservation.getsockname()[1]
         cls.process = subprocess.Popen(
-            [str(ROOT / ".lake/build/bin/leanwebstudy"), str(cls.http_port)],
+            [str(ROOT / ".lake/build/bin/wsecho"), str(cls.http_port)],
             cwd=ROOT, stdout=cls.log, stderr=cls.log,
         )
         try:

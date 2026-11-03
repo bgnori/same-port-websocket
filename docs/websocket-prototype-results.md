@@ -16,13 +16,13 @@
 
 ## 1. 実装した範囲
 
-- [Lifecycle](../../StdExt/Http/WebSocket/Lifecycle.lean):
+- [Lifecycle](../StdExt/Http/WebSocket/Lifecycle.lean):
   Bの直積状態・操作記録を小さく実装し、Cの保持義務を保留read/writeの記録として表した。
   汎用のPermit/Leaseフレームワークは作っていない。
-- [LifecycleTests](../../LeanWebStudy/LifecycleTests.lean):
+- [LifecycleTests](../StdExtTests/LifecycleTests.lean):
   純粋なstepへEvent列を与える決定的テストドライバーと、有界な履歴探索。
   OSのsocket・タスク・タイマーを使わない。並行実行器のモックそのものではない。
-- [既存テスト入口](../../LeanWebStudyTests.lean):
+- [既存テスト入口](../Tests.lean):
   新テストを組み込み、既存テストと同じ `lake test` で実行する。
 
 stepは `Except Error (State × List Effect)` を返す。
@@ -330,7 +330,7 @@ graceful closeで受理済みsendの排出を試みても、それは送信成�
   （ピアCloseのフレーム解析からの発火、Pingの同一送信経路での自動応答）。
   **`Lifecycle.Upgrade.upgrade`で接続ループへ組み込み**、実`serveUpgradable`サーバー上で
   実TCPクライアントがハンドシェイク→echo→自動Pong→Closeを完走し、通常HTTPも同一サーバーで
-  確認した（[LifecycleUpgradeTests](../../LeanWebStudy/LifecycleUpgradeTests.lean)）。
+  確認した（[LifecycleUpgradeTests](../StdExtTests/LifecycleUpgradeTests.lean)）。
   通常HTTPとupgradeは同じ`Transport.close`後始末を共有し、継続は特別な意味を要求しない。
   発見: `Upgraded`はrecv/sendのみでhalf-close/abortを持たず、abort能力は`Socket.Client`直結時のみ。
   詳細は[実Async接続の結果8節](./websocket-async-executor-results.md)。

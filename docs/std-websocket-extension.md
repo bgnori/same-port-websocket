@@ -3,13 +3,13 @@
 所属: [Std拡張WebSocket開発](./README.md)。現行APIの説明であり、
 寿命管理の純粋モデルが実通信経路へ組み込まれたことは意味しない。
 
-2026-11-02 作成。[websocket-risk-return-report.md](../application-study/websocket-risk-return-report.md)
+2026-11-02 作成。[websocket-risk-return-report.md](https://github.com/bgnori/LeanWebStudy/blob/main/docs/application-study/websocket-risk-return-report.md)
 の提案 6.1-1(`Std.Http.Server` の Upgrade / 接続移譲 API)と付録 A.5 の適用案を、
 本リポジトリ内の拡張ライブラリー `StdExt` として実装したもの。これにより
 WebSocket を **HTTP と同一ポート** で提供でき、レポートが固定費として挙げた
 別リスナー・ポート発見・開発トンネル・二重 Origin 検証が不要になる。
 動作実証は `/ws-echo/socket`(エコーエンドポイント)と
-[tests/test_ws_std.py](../../tests/test_ws_std.py) にある。
+[tests/test_ws_std.py](../tests/test_ws_std.py) にある。
 
 ## 1. 配置と名前空間のポリシー
 
@@ -176,18 +176,18 @@ Origin欠落だけを許可している。TLS終端やCodespaces転送先で使�
 
 ## 4. テスト
 
-- **Lean 単体テスト**([LeanWebStudyTests.lean](../../LeanWebStudyTests.lean)):
+- **Lean 単体テスト**([LeanWebStudyTests.lean](../Tests.lean)):
   SHA-1(FIPS 180-4 ベクター)、Base64(RFC 4648 §10 ベクター)、
   `Sec-WebSocket-Accept`(RFC 6455 §1.3 の実例)、フレームの往復と
   RFC 6455 §5.7 のマスク例、フレーム違反、クローズコード、
   ハンドシェイク検証の全拒否経路。
-- **結合テスト**([tests/test_ws_std.py](../../tests/test_ws_std.py)、
+- **結合テスト**([tests/test_ws_std.py](../tests/test_ws_std.py)、
   標準ライブラリーのみ、24 ケース):同一ポートでのハンドシェイク、
   テキスト・バイナリー(0〜70000 バイト、16/64 ビット拡張長)、断片化、
   断片間の制御フレーム、Ping/Pong、クローズハンドシェイク、先読みバイトの
   移譲、keep-alive 後の upgrade、並行接続、拒否応答(405/400/426/403)、
   プロトコル違反時の 1002/1007 切断、切断後の HTTP 継続稼働。
-- **Autobahn 互換性**([tests/test_ws_autobahn.py](../../tests/test_ws_autobahn.py)、
+- **Autobahn 互換性**([tests/test_ws_autobahn.py](../tests/test_ws_autobahn.py)、
   標準ライブラリーのみ、28 ケース・2026-11-03 全通過):
   [Autobahn|Testsuite](https://github.com/crossbario/autobahn-testsuite) の
   ケースクラス 1〜7・9 の代表的挙動を再実装した準拠スイート。
@@ -196,7 +196,7 @@ Origin欠落だけを許可している。TLS終端やCodespaces転送先で使�
   有効・無効クローズコードの echo/拒否(1002)、close 後データの無視、
   1 MiB 上限ちょうどの echo と超過時の 1009。
   本家スイートは Docker 専用のため、Docker がある環境向けの実行構成を
-  [tools/autobahn/](../../tools/autobahn/README.md)に同梱する
+  [tools/autobahn/](../tools/autobahn/README.md)に同梱する
   (`bash tests/autobahn.sh`)。除外ケース(1 MiB 超の 9.x、未実装の
   permessage-deflate 12/13)の根拠も同所に記録。
 

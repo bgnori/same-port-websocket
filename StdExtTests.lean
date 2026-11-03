@@ -1,0 +1,6 @@
+import StdExtTests.LifecycleTests
+import StdExtTests.MockExecutorTests
+import StdExtTests.AsyncExecutorTests
+import StdExtTests.TcpBackendTests
+import StdExtTests.FrameAdapterTests
+import StdExtTests.LifecycleUpgradeTests

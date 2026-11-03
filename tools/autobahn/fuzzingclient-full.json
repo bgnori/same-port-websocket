@@ -1,0 +1,14 @@
+{
+  "outdir": "/reports/ws-echo-full",
+  "servers": [
+    {
+      "agent": "same-port-websocket",
+      "url": "ws://127.0.0.1:8090/ws-echo/socket"
+    }
+  ],
+  "cases": ["*"],
+  "exclude-cases": [
+    "12.*", "13.*"
+  ],
+  "exclude-agent-cases": {}
+}

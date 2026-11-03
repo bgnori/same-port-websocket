@@ -76,11 +76,11 @@ Python側の変更は起動コマンドの定数のみ（`ROOT/.lake/build/bin/w
 | 対象 | 行き先 | 変更 |
 |---|---|---|
 | `StdExt/`一式・`StdExt.lean` | 新repo | 無変更 |
-| [LeanWebStudyTests.lean](../../LeanWebStudyTests.lean)の`section WebSocketTests`（SHA-1/Base64/accept key/フレーム/ハンドシェイク/Close理由） | 新repo `Tests.lean` | sectionの切り出しのみ |
+| [LeanWebStudyTests.lean](../Tests.lean)の`section WebSocketTests`（SHA-1/Base64/accept key/フレーム/ハンドシェイク/Close理由） | 新repo `Tests.lean` | sectionの切り出しのみ |
 | `LeanWebStudy/{Lifecycle,MockExecutor,AsyncExecutor,TcpBackend,FrameAdapter,LifecycleUpgrade}Tests.lean` | 新repo `Tests/` | namespace接頭辞の変更のみ（`LeanWebStudy.` → `StdExtTests.`等） |
 | `tests/test_ws_autobahn.py`・`tests/autobahn.sh`・`tools/autobahn/` | 新repo | サーバーバイナリ名を`wsecho`へ。フル実行用設定`fuzzingclient-full.json`を追加 |
 | `tests/test_ws_std.py` | **Studyに残し、新repoへは適合コピー** | Study版はアプリの`/ws-echo`（Origin方針・同一ポートHTTP共存を含む）の結合回帰として維持。新repo版は`wsecho`向けに起動部のみ変更 |
-| `docs/std-websocket/`全文書 | 新repo `docs/` | コード相対リンクを一段付け替え（`../../StdExt`→`../StdExt`）。[application-study](../application-study/README.md)への参照はStudyリポジトリへの絶対URLに変更 |
+| `docs/std-websocket/`全文書 | 新repo `docs/` | コード相対リンクを一段付け替え（`../../StdExt`→`../StdExt`）。[application-study](https://github.com/bgnori/LeanWebStudy/blob/main/docs/application-study/README.md)への参照はStudyリポジトリへの絶対URLに変更 |
 | `/ws-echo`エンドポイント・`WebHandler`のupgrade分岐・`Main.lean`の配線 | Studyに残す | lakefileに新repoを`require`（コミット固定）。importは無変更 |
 | `WsChat`（ws-lean）・chat/pong（libwebsockets native） | Studyに残す | 無変更（本実装と無関係） |
 | `docs/std-websocket/` | Studyからは削除し、入口READMEだけ残す | 移転先への案内と、application-study側の経緯文書への逆リンク |

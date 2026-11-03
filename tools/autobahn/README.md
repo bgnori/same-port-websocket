@@ -37,4 +37,4 @@ over the limit).
 
 For the survey of other external conformance tools and the plan for the
 standalone repository's CI (full Autobahn runs under GitHub Actions), see
-[docs/std-websocket/websocket-conformance-tools.md](../../docs/std-websocket/websocket-conformance-tools.md).
+[docs/std-websocket/websocket-conformance-tools.md](../../docs/websocket-conformance-tools.md).

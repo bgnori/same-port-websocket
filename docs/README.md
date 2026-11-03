@@ -1,6 +1,6 @@
 # Std拡張WebSocketの開発
 
-[二つの取り組みの入口](../README.md) / [派生元のアプリStudy](../application-study/README.md)
+[二つの取り組みの入口](https://github.com/bgnori/LeanWebStudy/blob/main/docs/README.md) / [派生元のアプリStudy](https://github.com/bgnori/LeanWebStudy/blob/main/docs/application-study/README.md)
 
 ## 目的
 
@@ -8,7 +8,7 @@ Lean本体のHTTP・Transport・connectionの慣習と整合し、
 使い手に接続移譲・終了管理の不自然な負担を漏らさないWebSocketを、
 Std拡張として実装・検証する。
 
-派生元は[アプリ実装から得た問題](../application-study/websocket-risk-return-report.md)。
+派生元は[アプリ実装から得た問題](https://github.com/bgnori/LeanWebStudy/blob/main/docs/application-study/websocket-risk-return-report.md)。
 同一ポートで動けば十分ではなく、並行操作・寿命・下位資源の契約まで扱う。
 
 ## 現状を一枚で
@@ -18,7 +18,7 @@ Std拡張として実装・検証する。
 | 区分 | 状態 |
 |---|---|
 | 現行実装 | StdExtのHTTP/1 upgrade、WebSocketフレーム・メッセージAPI、echo実証がある |
-| 修正・検証済み | Close理由のUTF-8切断を修正。既存のLean・通信テストの検証記録がある。Autobahn型準拠スイート（ケースクラス1〜7・9の再実装、28ケース）が2026-11-03に全通過し、本家Testsuite用のDocker実行構成を[tools/autobahn/](../../tools/autobahn/README.md)に同梱 |
+| 修正・検証済み | Close理由のUTF-8切断を修正。既存のLean・通信テストの検証記録がある。Autobahn型準拠スイート（ケースクラス1〜7・9の再実装、28ケース）が2026-11-03に全通過し、本家Testsuite用のDocker実行構成を[tools/autobahn/](../tools/autobahn/README.md)に同梱 |
 | 採用した設計 | 単一owner、Bの直積状態・操作台帳 + Cの最小保持不変条件 |
 | 合意した動作原則 | 正常closeは受理済み列を排出。ピアClose・障害・abortは未着手取消。取消・期限をI/O停止・回収完了と混同しない。終了責任の分担（D2）とsend/closeの利用者向け意味論（D3）は2026-11-03に承認済み |
 | 純粋モデル試作 | 七つの局所補題（終端性・write排他の帰納的保存を含む）、30超の入力列、深さ5・20,020ノードの探索。`lake test`成功 |
@@ -66,25 +66,25 @@ ws-leanと他言語の主要実装を同程度の補完資料とする。
 
 ## 実装・検証への入口
 
-- [StdExt](../../StdExt/)：現行upgrade・WebSocket実装と純粋モデル。
-- [Lifecycle](../../StdExt/Http/WebSocket/Lifecycle.lean)：通信経路に未接続の試作。制御操作台帳と補題を含む。
-- [MockExecutor](../../StdExt/Http/WebSocket/MockExecutor.lean)：Effectだけを実行する決定的モック実行器（段階B）。
-- [AsyncExecutor](../../StdExt/Http/WebSocket/AsyncExecutor.lean)：実`Std.Async`でモデルを駆動するセッション（段階C第1スライス）。
-- [FrameAdapter](../../StdExt/Http/WebSocket/FrameAdapter.lean)：フレーム解析・自動Pong・Close検出をSessionへ接続（段階C第3スライス）。
-- [LifecycleUpgrade](../../StdExt/Http/WebSocket/LifecycleUpgrade.lean)：Sessionをupgrade継続として動かす接続ループ入口（段階C第4スライス）。
-- [LifecycleTests](../../LeanWebStudy/LifecycleTests.lean)：決定的なモデル入力と探索。
-- [MockExecutorTests](../../LeanWebStudy/MockExecutorTests.lean)：実行器の決定的シナリオと対応関係の探索。
-- [AsyncExecutorTests](../../LeanWebStudy/AsyncExecutorTests.lean)：mock transport上のセッションとモデル再生の検証。
-- [TcpBackendTests](../../LeanWebStudy/TcpBackendTests.lean)：実TCPの能力プローブと実TCPセッション（段階C第2スライス）。
-- [FrameAdapterTests](../../LeanWebStudy/FrameAdapterTests.lean)：実TCP上のecho・自動Pong・Closeハンドシェイク（段階C第3スライス）。
-- [LifecycleUpgradeTests](../../LeanWebStudy/LifecycleUpgradeTests.lean)：実`serveUpgradable`サーバー上のWebSocket接続（段階C第4スライス）。
-- [Leanテスト入口](../../LeanWebStudyTests.lean)：アプリのテストと実行単位を共有。
-- [通信テスト](../../tests/test_ws_std.py)：現行echo経路の検証。純粋モデルの適合証明ではない。
-- [Autobahn型準拠テスト](../../tests/test_ws_autobahn.py)：プロトコル互換性の検証。本家Testsuiteの実行構成は[tools/autobahn/](../../tools/autobahn/README.md)。
+- [StdExt](../StdExt/)：現行upgrade・WebSocket実装と純粋モデル。
+- [Lifecycle](../StdExt/Http/WebSocket/Lifecycle.lean)：通信経路に未接続の試作。制御操作台帳と補題を含む。
+- [MockExecutor](../StdExt/Http/WebSocket/MockExecutor.lean)：Effectだけを実行する決定的モック実行器（段階B）。
+- [AsyncExecutor](../StdExt/Http/WebSocket/AsyncExecutor.lean)：実`Std.Async`でモデルを駆動するセッション（段階C第1スライス）。
+- [FrameAdapter](../StdExt/Http/WebSocket/FrameAdapter.lean)：フレーム解析・自動Pong・Close検出をSessionへ接続（段階C第3スライス）。
+- [LifecycleUpgrade](../StdExt/Http/WebSocket/LifecycleUpgrade.lean)：Sessionをupgrade継続として動かす接続ループ入口（段階C第4スライス）。
+- [LifecycleTests](../StdExtTests/LifecycleTests.lean)：決定的なモデル入力と探索。
+- [MockExecutorTests](../StdExtTests/MockExecutorTests.lean)：実行器の決定的シナリオと対応関係の探索。
+- [AsyncExecutorTests](../StdExtTests/AsyncExecutorTests.lean)：mock transport上のセッションとモデル再生の検証。
+- [TcpBackendTests](../StdExtTests/TcpBackendTests.lean)：実TCPの能力プローブと実TCPセッション（段階C第2スライス）。
+- [FrameAdapterTests](../StdExtTests/FrameAdapterTests.lean)：実TCP上のecho・自動Pong・Closeハンドシェイク（段階C第3スライス）。
+- [LifecycleUpgradeTests](../StdExtTests/LifecycleUpgradeTests.lean)：実`serveUpgradable`サーバー上のWebSocket接続（段階C第4スライス）。
+- [Leanテスト入口](../Tests.lean)：単体テストと全スイートの実行単位。
+- [通信テスト](../tests/test_ws_std.py)：現行echo経路の検証。純粋モデルの適合証明ではない。
+- [Autobahn型準拠テスト](../tests/test_ws_autobahn.py)：プロトコル互換性の検証。本家Testsuiteの実行構成は[tools/autobahn/](../tools/autobahn/README.md)。
 
 ```sh
-lake build LeanWebStudy.LifecycleTests LeanWebStudy.MockExecutorTests LeanWebStudy.AsyncExecutorTests
 lake test
+python3 -m unittest discover -s tests -p 'test_ws_*.py'
 ```
 
 通信テストの実行方法は[現行API文書](./std-websocket-extension.md)を参照。
