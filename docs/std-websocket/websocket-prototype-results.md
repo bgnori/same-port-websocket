@@ -324,8 +324,9 @@ graceful closeで受理済みsendの排出を試みても、それは送信成�
   [実Asyncランタイム接続の結果](./websocket-async-executor-results.md)。
   さらに実TCPのloopback socket対で能力プローブを実測し
   （[依存先契約C8](./websocket-dependency-contracts.md)）、shutdown時の保留recvの扱いを確認:
-  gracefulはピア協力で解決し追加能力不要、abort経路に中断能力はなく、
-  保持責務が維持されることを実TCPで確認。graceful全経路も実TCPで完走・再生一致
+  gracefulはピア協力で解決し追加能力不要、素の`recv?`に中断能力はなく保持責務を維持、
+  selector化したreadはabortでピア協力なしに速やかに回収できbusyは恒久化しない。
+  graceful全経路も実TCPで完走・再生一致
   （[TcpBackendTests](../../LeanWebStudy/TcpBackendTests.lean)）。
   **残り**: `serveUpgradableConnection`接続ループへの組み込み、
   通常HTTPとupgradeの終了契約の同一適用。HTTP/2はこの段階の合格に含めない。

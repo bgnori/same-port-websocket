@@ -99,17 +99,24 @@ mock transportの`close`が効いてもTCPで同じ中断が効くとは仮定�
 
 [試作結果6.4節](./websocket-prototype-results.md)の台帳を正とする。
 
-**shutdown時の保留recvの確認は実測済み**（2026-11-03、
-[依存先契約C8](./websocket-dependency-contracts.md)）:
-graceful終了はピアの協力（Close応答またはEOF）で保留recvが自然に解決するため
-追加の中断能力を要求しない。能力が問われるのは期限後のabort経路であり、
-Lean Std TCPは素の保留recv・in-flight writeを中断できないので、
-abortを失敗として正直に報告し、保持責務を残したまま静止・解放済みと報告しない
-ことを実TCPで確認した。実TCPへの`Backend`配線（[TcpBackendTests](../../LeanWebStudy/TcpBackendTests.lean)の
-`tcpBackend`）でgraceful close全経路と履歴のモデル再生一致も確認済み。
+**shutdown時の保留recvの確認は実測済み**(2026-11-03、
+[依存先契約C8](./websocket-dependency-contracts.md)):
+graceful終了はピアの協力(Close応答またはEOF)で保留recvが自然に解決するため
+追加の中断能力を要求しない。期限後のabort経路については、素の`recv?`は中断不能だが、
+**readをselector経由(recvSelector＋cancel channel)にすればabortがピアの協力なしに
+保留readを速やかに回収し、sessionは有界時間でquietに達してreleaseできる**ことを
+実TCPで確認した([TcpBackendTests](../../LeanWebStudy/TcpBackendTests.lean)の
+`cancellableTcpBackend`とprobe 5)。busyは恒久化しない。
+
+解放の順序は二層で維持する: owner所有の論理資源(queue・payload・待機者・新規受付)は
+deadline/abortで**即時**解放し、backendが保持するnative資源(read/writeバッファ・socket)は
+**取消を速やかに要求し、callback(race解決)が返った時点で**解放する。
+タイマー切れを理由に保持中の資源を先に解放・無効化することはしない
+([依存先契約C1](./websocket-dependency-contracts.md)のUAF回避)。
+論理的な参照の無効化はモデルの終端性(`released_is_terminal`)が担い、
+release後のセッションは全イベントを拒否する。
 
 残りは`serveUpgradableConnection`の実接続ループへの組み込みと、
 通常HTTPとupgradeへの同一終了契約の適用検証である。
-読み待ちをselector経由に移行すれば放棄（unregister）という形の読取停止が
-可能であることも確認したので、接続ループ組み込み時のshutdown通知経路の
-候補として検討する。HTTP/2は別adapterとして後続で検証する。
+接続ループ組み込みでは読み待ちをselector経由にすること(abort回収の前提)とし、
+shutdown通知をcancel channel相当に配線する。HTTP/2は別adapterとして後続で検証する。

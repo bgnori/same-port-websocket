@@ -204,16 +204,20 @@ native shutdownは重複要求を拒否するフラグを持ち、完了までso
 
 | 確認 | 結果 |
 |---|---|
-| ピアの`shutdown`（write半閉鎖）と保留recv | 保留中の`recv?`が`none`（EOF）で解決する。逆方向の送受信は生存する（C6の「shutdownは半閉鎖」の実測） |
+| ピアの`shutdown`（write半閉鎖）と保留recv | 保留中の`recv?`が`none`（EOF）で解決する。逆方向の送受信は生存する（C6の「shutdownは半閉鎖」の実測) |
 | selector経由の読み待ち放棄 | `Selectable.one`で敗者になったrecvSelectorのunregister（`cancelRecv`経路、C5）後も、socketは使用可能で後続データを受信できる |
-| 沈黙するピアの保留recv | 公開APIに保留中の素の`recv?`やin-flight writeを中断する操作はない。abort能力を失敗として正直に報告し（D5）、sessionの`release`は`.busy`で拒否され続け、ピアEOFのみが解決した（保持責務の維持、C4の帰結） |
+| 沈黙するピアの保留recv（素の`recv?`） | 公開APIに保留中の素の`recv?`やin-flight writeを中断する操作はない。abort能力を失敗として正直に報告し（D5）、sessionの`release`は`.busy`で拒否され続け、ピアEOFのみが解決した（保持責務の維持、C4の帰結） |
+| selector化したreadのabort回収 | readを`Selectable.one`（recvSelector＋cancel channel）経由にすると、abortがピアの協力なしに保留readを速やかに解決し、sessionは有界時間で`quiet`に達してreleaseできた。busyは恒久化しない。回収はrace解決（＝操作の完了）後であり、保持中の強制解放はしない |
 | graceful close全経路 | 受理済み排出→Close書込→半閉鎖→ピアEOF→release が実TCPで完走し、記録履歴が純粋モデルへ再生一致した |
 
 含意: gracefulな終了はピアの協力（Close応答またはEOF）だけで保留recvが自然に解決するため、
-追加の中断能力を要求しない。中断能力が問われるのは期限後のabort経路であり、
-このbackendでは素のrecvを強制解決できないので、owner は保持責務を残したまま
-静止・解放済みと報告しない、という方針（D5・6.2節のD2責任分担）が実測と整合する。
-selector経由の読み待ちに移行すれば、放棄（unregister）という形の読み取り停止は可能である。
+追加の中断能力を要求しない。期限後のabort経路では、**readはselector化すれば自前で回収できる**
+（素の`recv?`のままでは不可）。in-flight writeは中断できないが、kernel bufferへの受理で
+完了するため、実際の未解決期間は短い。いずれの場合も、取消は「操作を速やかに完了させる」
+手段であって、backendが保持中の資源をタイマー等で先に解放する手段ではない（C1のUAF回避）。
+owner所有の論理資源（queue・payload・待機者・新規受付）はabort時に即時解放し、
+native資源はcallback（race解決）を待って解放する、という二層の解放順序が実測と整合する。
+接続ループ組み込みでは読み待ちをselector経由にすることを前提とする。
 
 ## 6. 証明へ取り込む前提と未解決の義務
 
