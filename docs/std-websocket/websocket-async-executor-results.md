@@ -143,3 +143,38 @@ shutdown通知をcancel channel相当に配線する。HTTP/2は別adapterとし
 - **このスライスの簡略化**: 分割メッセージ（fragmentation）は非対応で明示エラー、
   Close応答は固定フレーム（ピアのclose codeをechoしない）、Pong対応付けなし、
   受信payloadの容量計上なし。いずれも接続ループ組み込みまでに扱う。
+
+## 8. 追補（2026-11-03）: 接続ループへの組み込みと終了契約の発見
+
+試作結果チェックリスト「HTTP/1 backendへ接続する」の接続ループ組み込みを実装した。
+
+- **`Lifecycle.Upgrade.upgrade`**（[LifecycleUpgrade](../../StdExt/Http/WebSocket/LifecycleUpgrade.lean)）:
+  既存`WebSocket.upgrade`と対になるupgrade入口。ハンドシェイク検証後、
+  `Upgraded`ストリーム上で`MessageSession`のowner echoループ（`echoOwner`）を動かす。
+  [LifecycleUpgradeTests](../../LeanWebStudy/LifecycleUpgradeTests.lean)が実`serveUpgradable`
+  サーバーを起動し、実TCPクライアントがRFC 6455ハンドシェイク→echo→自動Pong→Close
+  ハンドシェイクを完走。同一サーバーの通常HTTP（200）も確認した。
+
+- **終了契約の発見（重要）**: `Server.Upgraded`は**transport非依存でrecv/sendのみ公開し、
+  half-closeもread取消も持たない**（Cowboy方式でsocketは継続へ渡らず、サーバーが
+  `Transport.close`で後始末を所有する）。したがって`Upgraded`から作るbackendは、
+  実`Socket.Client`が持つabort能力（[TcpBackendTests](../../LeanWebStudy/TcpBackendTests.lean)）を
+  提供できない。これを成功偽装せず正直に扱う:
+  - `finishSend`はowner水準の「以後フレームを送らない」という約束を表す。モデルが
+    既に強制しており（Close書込後は何もdispatchしない）、wire上のFINは継続return時の
+    サーバー`Transport.close`が出す。機構の遅延であって偽装ではない。
+  - `abort`（保留recvの強制完了）は`Upgraded`越しにownerが持たない能力であり、
+    failedとして報告し偽装しない。沈黙ピアの保留recvはピアEOFかサーバーの
+    shutdown時`Transport.close`が解決する（TCPプローブの記録と一致）。
+
+- **通常HTTPとupgradeの終了契約の同一性**: 両経路ともサーバーが`Transport.close`で
+  後始末する点は変わらず、WebSocket継続は`Transport.close`に特別な意味を要求しない。
+  これはD2（ownerがsession I/Oを回収し、HTTP connectionが境界を閉じる）と整合する。
+
+- **既存API不変（D6）**: 既存の`WebSocket.upgrade`・`/ws-echo`経路は変更していない。
+  本実装は別入口として追加した。
+
+- **このスライスの簡略化**: owner echoループは分割メッセージ非対応（明示エラー）、
+  Close応答は固定code 1000、サーバーshutdown中にowner継続が保留recvを持つ場合の
+  `Transport.close`解除経路はStd実装依存で、本テストではピア協力で終了している。
+  `Upgraded`へhalf-close/abort能力を公開するか否かは、終了契約の今後の論点として残す。

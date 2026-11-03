@@ -26,22 +26,20 @@ Std拡張として実装・検証する。
 | 段階C第1スライス（2026-11-03） | 純粋モデルを実`Std.Async`ランタイムとStd付属mock transportに接続。backend能力をLean Std TCP/libuvの実契約に限定（D1・D5）し、中断不能を成功へ変換しないことを確認。graceful close・write失敗・deadline＋保留readの3シナリオで、実行履歴がモデルへ再生一致 |
 | 段階C第2スライス（2026-11-03） | 実TCP(loopback)で能力プローブを実測（依存先契約C8）: ピア半閉鎖で保留recvがEOF解決、素の`recv?`は中断不能で保持責務を維持、**selector化したreadはabortでピア協力なしに速やかに回収できbusyは恒久化しない**、graceful全経路が実TCPで完走し履歴がモデルへ再生一致 |
 | 段階C第3スライス（2026-11-03） | read完了をdata/EOF/取消/失敗に分化（停止中は遅延データを配送しない）。フレーム層をSessionへ接続: ピアCloseがフレーム解析から`peerClose`を発火、Ping自動応答は同一直列化送信経路に合流。実TCP上のecho・Pong・Closeハンドシェイクが履歴のモデル再生一致 |
-| まだ未接続 | 接続ループ(`serveUpgradableConnection`)への配線は未着手。既存公開APIは未変更 |
-| 保留 | 公開終了API、接続ループ組み込み、HTTP/2接続、結果一意性・容量の帰納的保存証明、並行send向けの受理点実装 |
+| 段階C第4スライス（2026-11-03） | `Lifecycle.Upgrade.upgrade`で接続ループへ組み込み。実`serveUpgradable`サーバー上で実TCPクライアントがハンドシェイク→echo→自動Pong→Closeを完走、通常HTTPも同一サーバーで確認。発見: `Upgraded`はrecv/sendのみでhalf-close/abort非対応、サーバーが`Transport.close`を所有。既存`WebSocket.upgrade`は不変（D6） |
+| まだ未接続 | HTTP/2 adapterは未着手。分割メッセージ・close code echo・受信容量計上は未対応 |
+| 保留 | 公開終了API、HTTP/2接続、結果一意性・容量の帰納的保存証明、並行send向けの受理点実装、`Upgraded`へのhalf-close/abort公開の是非 |
 | 未保証 | native全体の安全性、無条件の有界資源回収、HTTP/2実装全体の適合 |
 
-**段階B（モック実行器）・段階C第1スライス（mock transport接続）・第2スライス
-（実TCP能力プローブと実TCPセッション）は2026-11-03に実装済み。結果は
-[モック実行器の結果](./websocket-mock-executor-results.md)、
+**段階B・段階C（第1〜4スライス）は2026-11-03に実装済み。純粋モデルを実`serveUpgradable`
+サーバーの実WebSocket接続まで駆動し、実TCPクライアントがハンドシェイク→echo→自動Pong→
+Closeを完走する。結果は[モック実行器の結果](./websocket-mock-executor-results.md)、
 [実Async接続の結果](./websocket-async-executor-results.md)、
 [依存先契約C8（実TCP実測）](./websocket-dependency-contracts.md)を参照。
-shutdown時の保留recvの扱いは確認済み: gracefulはピア協力で自然に解決し、
-素の`recv?`に中断能力はないため保持責務を残し静止扱いしないこと、
-selector化したreadならabortがピア協力なしに速やかに回収しbusyが恒久化しないことを
-実TCPで実証した。owner論理資源は即時解放・native資源はcallback後解放の二層を維持する。
-次の作業は`serveUpgradableConnection`接続ループへの組み込み
-（読み待ちのselector化を前提）と、
-通常HTTPとupgradeへの同一終了契約の適用検証である。HTTP/2は別adapterとして後続。**
+既存`WebSocket.upgrade`・`/ws-echo`経路は不変（D6）。
+終了契約の発見: `Upgraded`はrecv/sendのみでhalf-close/abortを持たず、サーバーが
+`Transport.close`で後始末を所有する。次の作業はHTTP/2 adapter、分割メッセージ・
+close code echo・受信容量計上、`Upgraded`への能力公開の是非である。**
 
 ## 読む順序
 
@@ -71,11 +69,13 @@ ws-leanと他言語の主要実装を同程度の補完資料とする。
 - [MockExecutor](../../StdExt/Http/WebSocket/MockExecutor.lean)：Effectだけを実行する決定的モック実行器（段階B）。
 - [AsyncExecutor](../../StdExt/Http/WebSocket/AsyncExecutor.lean)：実`Std.Async`でモデルを駆動するセッション（段階C第1スライス）。
 - [FrameAdapter](../../StdExt/Http/WebSocket/FrameAdapter.lean)：フレーム解析・自動Pong・Close検出をSessionへ接続（段階C第3スライス）。
+- [LifecycleUpgrade](../../StdExt/Http/WebSocket/LifecycleUpgrade.lean)：Sessionをupgrade継続として動かす接続ループ入口（段階C第4スライス）。
 - [LifecycleTests](../../LeanWebStudy/LifecycleTests.lean)：決定的なモデル入力と探索。
 - [MockExecutorTests](../../LeanWebStudy/MockExecutorTests.lean)：実行器の決定的シナリオと対応関係の探索。
 - [AsyncExecutorTests](../../LeanWebStudy/AsyncExecutorTests.lean)：mock transport上のセッションとモデル再生の検証。
 - [TcpBackendTests](../../LeanWebStudy/TcpBackendTests.lean)：実TCPの能力プローブと実TCPセッション（段階C第2スライス）。
 - [FrameAdapterTests](../../LeanWebStudy/FrameAdapterTests.lean)：実TCP上のecho・自動Pong・Closeハンドシェイク（段階C第3スライス）。
+- [LifecycleUpgradeTests](../../LeanWebStudy/LifecycleUpgradeTests.lean)：実`serveUpgradable`サーバー上のWebSocket接続（段階C第4スライス）。
 - [Leanテスト入口](../../LeanWebStudyTests.lean)：アプリのテストと実行単位を共有。
 - [通信テスト](../../tests/test_ws_std.py)：現行echo経路の検証。純粋モデルの適合証明ではない。
 

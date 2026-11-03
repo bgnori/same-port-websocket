@@ -317,7 +317,7 @@ graceful closeで受理済みsendの排出を試みても、それは送信成�
   証明し、残る不変条件の帰納的証明は未完として明示した。
   結果は[実装結果](./websocket-mock-executor-results.md)（2026-11-03）。
   D7の暫定合格条件（5節）の見直しは段階C着手前に行う。
-- [~] **HTTP/1 backendへ接続する（第1〜2スライス、2026-11-03）**: 実`Std.Async`ランタイムと
+- [x] **HTTP/1 backendへ接続する（2026-11-03、完了）**: 実`Std.Async`ランタイムと
   Std付属mock transport（`CloseableChannel`双方向）へ純粋モデルを接続し、履歴をモデルへ
   再生一致させた。backend能力をLean Std TCP/libuvの実契約に限定（D1・D5）し、
   中断不能を成功へ変換しないことを検証した。結果は
@@ -326,17 +326,19 @@ graceful closeで受理済みsendの排出を試みても、それは送信成�
   （[依存先契約C8](./websocket-dependency-contracts.md)）、shutdown時の保留recvの扱いを確認:
   gracefulはピア協力で解決し追加能力不要、素の`recv?`に中断能力はなく保持責務を維持、
   selector化したreadはabortでピア協力なしに速やかに回収できbusyは恒久化しない。
-  graceful全経路も実TCPで完走・再生一致
-  （[TcpBackendTests](../../LeanWebStudy/TcpBackendTests.lean)）。
-  加えてread完了をdata/EOF/取消/失敗へ分化し、フレーム層をSessionへ接続した
-  （ピアCloseのフレーム解析からの発火、Pingの同一送信経路での自動応答。
-  [実Async接続の結果7節](./websocket-async-executor-results.md)）。
-  **残り**: `serveUpgradableConnection`接続ループへの組み込み、
-  通常HTTPとupgradeの終了契約の同一適用、分割メッセージ・close code echo・
-  受信容量計上。HTTP/2はこの段階の合格に含めない。
+  read完了をdata/EOF/取消/失敗へ分化し、フレーム層をSessionへ接続
+  （ピアCloseのフレーム解析からの発火、Pingの同一送信経路での自動応答）。
+  **`Lifecycle.Upgrade.upgrade`で接続ループへ組み込み**、実`serveUpgradable`サーバー上で
+  実TCPクライアントがハンドシェイク→echo→自動Pong→Closeを完走し、通常HTTPも同一サーバーで
+  確認した（[LifecycleUpgradeTests](../../LeanWebStudy/LifecycleUpgradeTests.lean)）。
+  通常HTTPとupgradeは同じ`Transport.close`後始末を共有し、継続は特別な意味を要求しない。
+  発見: `Upgraded`はrecv/sendのみでhalf-close/abortを持たず、abort能力は`Socket.Client`直結時のみ。
+  詳細は[実Async接続の結果8節](./websocket-async-executor-results.md)。
+  **残り（後続スライス）**: HTTP/2 adapter、分割メッセージ・close code echo・受信容量計上、
+  `Upgraded`へのhalf-close/abort能力公開の是非。
 - [ ] **closeの反例を記録する (必要な場合のみ)**: 既存closeを変えないと具体的な要件を満たせない
   履歴が見つかった場合、その最小反例と代替案を示してからD6を再検討する。
-  第1スライスでは既存closeを変える必要のある反例は見つかっていない。
+  接続ループ組み込みまでで既存closeを変える必要のある反例は見つかっていない。
 
 各チェック項目は、判断と根拠を所定の記録先へ反映し、対応するテストまたは未保証事項を
 示してから完了にする。判断が実行可能性を変えた場合は、後続項目を確定する前に本台帳へ戻る。

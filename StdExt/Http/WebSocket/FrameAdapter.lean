@@ -92,10 +92,15 @@ partial def nextInbound (ms : MessageSession) : Async (Except Error Inbound) := 
       return .ok (.message frame)
     | .continuation => return .ok (.violation .unexpectedContinuation)
     | .ping =>
-      -- The automatic Pong joins the same serialized outbound queue.
+      -- The automatic Pong joins the same serialized outbound queue, then is
+      -- flushed so the control reply is sent promptly rather than waiting for
+      -- the next application frame.
       match ← ms.submitFrame { opcode := .pong, payload := frame.payload } with
       | .error e => return .error e
-      | .ok _ => ms.nextInbound
+      | .ok _ =>
+        match ← ms.flushOutbound with
+        | .error e => return .error e
+        | .ok _ => ms.nextInbound
     | .pong => ms.nextInbound
     | .close =>
       match ← ms.session.peerClosed with
