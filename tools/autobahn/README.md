@@ -30,6 +30,15 @@ current CI. Two complementary layers cover compatibility:
 | 9.1.4–9.1.6, 9.2.4–9.2.6, 9.3.*, 9.4.* | Payloads of 4–16 MiB exceed the endpoint's deliberate 1 MiB `Config.maxFrameBytes`/`maxMessageBytes` default (D4); the server correctly answers `1009 message too big`, which `wstest` scores as a failure rather than a policy. Raise the limits in `WebSocket.Config` if a full-size run is wanted. |
 | 12.*, 13.* | `permessage-deflate` compression is not implemented (out of scope; docs/std-websocket/websocket-prototype-results.md §4). |
 
+## Accepted non-OK verdicts
+
+`check_report.py` accepts `NON-STRICT` in addition to `OK`/`INFORMATIONAL`/
+`UNIMPLEMENTED`. The only `NON-STRICT` cases are 6.4.1-6.4.4 (fail-fast
+detection of invalid UTF-8 *mid-message*): this implementation validates text
+payloads once a message is complete, which RFC 6455 permits; wstest marks
+implementations without incremental validation as non-strict, not as failing.
+First full run (2026-11-03, run #1): 277 cases, 0 failures, 4 NON-STRICT.
+
 The `exclude-cases` above are a size *policy*, not a protocol gap: the 1 MiB
 boundary itself is covered (case 9.1.3/9.2.3 at exactly 1 MiB pass, and
 `tests/test_ws_autobahn.py` additionally asserts the `1009` close for one byte

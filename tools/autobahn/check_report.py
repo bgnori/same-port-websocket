@@ -10,7 +10,10 @@ than OK / INFORMATIONAL / UNIMPLEMENTED, and prints the offending cases.
 import json
 import sys
 
-ACCEPTED = {"OK", "INFORMATIONAL", "UNIMPLEMENTED"}
+# NON-STRICT: spec-conformant but not fail-fast (e.g. 6.4.x incremental UTF-8
+# validation; this implementation validates per message, which RFC 6455
+# permits). Accepted, with the rationale recorded in README.md.
+ACCEPTED = {"OK", "INFORMATIONAL", "UNIMPLEMENTED", "NON-STRICT"}
 
 
 def main() -> int:
