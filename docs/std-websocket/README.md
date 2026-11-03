@@ -24,18 +24,20 @@ Std拡張として実装・検証する。
 | 純粋モデル試作 | 七つの局所補題（終端性・write排他の帰納的保存を含む）、30超の入力列、深さ5・20,020ノードの探索。`lake test`成功 |
 | 段階B（2026-11-03） | 制御操作（abort・finishSend）を予約・登録・完了・保持の台帳へ拡張。D4初期値を決定。Effectだけを実行する決定的モック実行器が、登録失敗・完了順入替え・待機者消失・半閉鎖/取消待ちを再現し、27コマンド・深さ5・37,305ノードで実行器とモデルの対応を検査 |
 | 段階C第1スライス（2026-11-03） | 純粋モデルを実`Std.Async`ランタイムとStd付属mock transportに接続。backend能力をLean Std TCP/libuvの実契約に限定（D1・D5）し、中断不能を成功へ変換しないことを確認。graceful close・write失敗・deadline＋保留readの3シナリオで、実行履歴がモデルへ再生一致 |
-| まだ未接続 | 実TCP(`Socket.Client`)・接続ループ(`serveUpgradableConnection`)への配線は未着手。mock成功はTCPでの同一挙動を意味しない |
-| 保留 | 公開終了API、実TCP/HTTP/2接続、結果一意性・容量の帰納的保存証明、並行send向けの受理点実装 |
+| 段階C第2スライス（2026-11-03） | 実TCP(loopback)で能力プローブを実測（依存先契約C8）: ピア半閉鎖で保留recvがEOF解決、selector経由の読み待ち放棄は可能、沈黙ピアでは中断不能でabortを正直に失敗させ保持責務を維持、graceful全経路が実TCPで完走し履歴がモデルへ再生一致 |
+| まだ未接続 | 接続ループ(`serveUpgradableConnection`)への配線は未着手。既存公開APIは未変更 |
+| 保留 | 公開終了API、接続ループ組み込み、HTTP/2接続、結果一意性・容量の帰納的保存証明、並行send向けの受理点実装 |
 | 未保証 | native全体の安全性、無条件の有界資源回収、HTTP/2実装全体の適合 |
 
-**段階B（制御I/Oを含むモデルと非同期モック実行器）と段階C第1スライス（実`Std.Async`
-ランタイム＋mock transport接続）は2026-11-03に実装済み。結果は
-[モック実行器の結果](./websocket-mock-executor-results.md)と
-[実Async接続の結果](./websocket-async-executor-results.md)を参照。
-次の作業は実TCP(`Socket.Client`)への`Backend`配線と、
-`serveUpgradableConnection`接続ループへの組み込みである。
-その前に、shutdown時の保留recvがLean Std TCPで解消できるか（できない場合も
-保持・回収責務を維持できるか）を確認する。HTTP/2は別adapterとして後続で検証する。**
+**段階B（モック実行器）・段階C第1スライス（mock transport接続）・第2スライス
+（実TCP能力プローブと実TCPセッション）は2026-11-03に実装済み。結果は
+[モック実行器の結果](./websocket-mock-executor-results.md)、
+[実Async接続の結果](./websocket-async-executor-results.md)、
+[依存先契約C8（実TCP実測）](./websocket-dependency-contracts.md)を参照。
+shutdown時の保留recvの扱いは確認済み: gracefulはピア協力で自然に解決し、
+abort経路に中断能力はないため、保持責務を残し静止扱いしないことを実TCPで実証した。
+次の作業は`serveUpgradableConnection`接続ループへの組み込みと、
+通常HTTPとupgradeへの同一終了契約の適用検証である。HTTP/2は別adapterとして後続。**
 
 ## 読む順序
 
@@ -67,6 +69,7 @@ ws-leanと他言語の主要実装を同程度の補完資料とする。
 - [LifecycleTests](../../LeanWebStudy/LifecycleTests.lean)：決定的なモデル入力と探索。
 - [MockExecutorTests](../../LeanWebStudy/MockExecutorTests.lean)：実行器の決定的シナリオと対応関係の探索。
 - [AsyncExecutorTests](../../LeanWebStudy/AsyncExecutorTests.lean)：mock transport上のセッションとモデル再生の検証。
+- [TcpBackendTests](../../LeanWebStudy/TcpBackendTests.lean)：実TCPの能力プローブと実TCPセッション（段階C第2スライス）。
 - [Leanテスト入口](../../LeanWebStudyTests.lean)：アプリのテストと実行単位を共有。
 - [通信テスト](../../tests/test_ws_std.py)：現行echo経路の検証。純粋モデルの適合証明ではない。
 

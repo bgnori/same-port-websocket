@@ -196,6 +196,25 @@ native shutdownは重複要求を拒否するフラグを持ち、完了までso
 「保留writeが必ず一定時間内に完了する」とは今回の資料から言えない。
 タイマーを加えても、物理的解放の保証は別途必要である。
 
+### C8. 実測: 実TCPでの保留recvの解決とabort能力（2026-11-03）
+
+[TcpBackendTests](../../LeanWebStudy/TcpBackendTests.lean)で、loopback上の実socket対に
+対して以下を実行・確認した（`lake test`に組み込み）。実測は当該環境・当該版での
+挙動確認であり、全プラットフォームの保証ではない。
+
+| 確認 | 結果 |
+|---|---|
+| ピアの`shutdown`（write半閉鎖）と保留recv | 保留中の`recv?`が`none`（EOF）で解決する。逆方向の送受信は生存する（C6の「shutdownは半閉鎖」の実測） |
+| selector経由の読み待ち放棄 | `Selectable.one`で敗者になったrecvSelectorのunregister（`cancelRecv`経路、C5）後も、socketは使用可能で後続データを受信できる |
+| 沈黙するピアの保留recv | 公開APIに保留中の素の`recv?`やin-flight writeを中断する操作はない。abort能力を失敗として正直に報告し（D5）、sessionの`release`は`.busy`で拒否され続け、ピアEOFのみが解決した（保持責務の維持、C4の帰結） |
+| graceful close全経路 | 受理済み排出→Close書込→半閉鎖→ピアEOF→release が実TCPで完走し、記録履歴が純粋モデルへ再生一致した |
+
+含意: gracefulな終了はピアの協力（Close応答またはEOF）だけで保留recvが自然に解決するため、
+追加の中断能力を要求しない。中断能力が問われるのは期限後のabort経路であり、
+このbackendでは素のrecvを強制解決できないので、owner は保持責務を残したまま
+静止・解放済みと報告しない、という方針（D5・6.2節のD2責任分担）が実測と整合する。
+selector経由の読み待ちに移行すれば、放棄（unregister）という形の読み取り停止は可能である。
+
 ## 6. 証明へ取り込む前提と未解決の義務
 
 | ID | 前提・義務 | 現在の根拠／不足 | 設計上の扱い |

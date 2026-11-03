@@ -98,7 +98,18 @@ mock transportの`close`が効いてもTCPで同じ中断が効くとは仮定�
 ## 6. 次の作業
 
 [試作結果6.4節](./websocket-prototype-results.md)の台帳を正とする。
-残りは実TCP(`Socket.Client`)への`Backend`配線と、
-`serveUpgradableConnection`の実接続ループへの組み込みである。
-その前に、shutdown時の保留recvがLean Std TCPで解消できるか（解消できない場合も
-保持・回収責務を維持できるか）を確認する。HTTP/2は別adapterとして後続で検証する。
+
+**shutdown時の保留recvの確認は実測済み**（2026-11-03、
+[依存先契約C8](./websocket-dependency-contracts.md)）:
+graceful終了はピアの協力（Close応答またはEOF）で保留recvが自然に解決するため
+追加の中断能力を要求しない。能力が問われるのは期限後のabort経路であり、
+Lean Std TCPは素の保留recv・in-flight writeを中断できないので、
+abortを失敗として正直に報告し、保持責務を残したまま静止・解放済みと報告しない
+ことを実TCPで確認した。実TCPへの`Backend`配線（[TcpBackendTests](../../LeanWebStudy/TcpBackendTests.lean)の
+`tcpBackend`）でgraceful close全経路と履歴のモデル再生一致も確認済み。
+
+残りは`serveUpgradableConnection`の実接続ループへの組み込みと、
+通常HTTPとupgradeへの同一終了契約の適用検証である。
+読み待ちをselector経由に移行すれば放棄（unregister）という形の読取停止が
+可能であることも確認したので、接続ループ組み込み時のshutdown通知経路の
+候補として検討する。HTTP/2は別adapterとして後続で検証する。

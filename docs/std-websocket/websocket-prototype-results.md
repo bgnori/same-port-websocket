@@ -317,14 +317,18 @@ graceful closeで受理済みsendの排出を試みても、それは送信成�
   証明し、残る不変条件の帰納的証明は未完として明示した。
   結果は[実装結果](./websocket-mock-executor-results.md)（2026-11-03）。
   D7の暫定合格条件（5節）の見直しは段階C着手前に行う。
-- [~] **HTTP/1 backendへ接続する（第1スライス着手、2026-11-03）**: 実`Std.Async`ランタイムと
+- [~] **HTTP/1 backendへ接続する（第1〜2スライス、2026-11-03）**: 実`Std.Async`ランタイムと
   Std付属mock transport（`CloseableChannel`双方向）へ純粋モデルを接続し、履歴をモデルへ
   再生一致させた。backend能力をLean Std TCP/libuvの実契約に限定（D1・D5）し、
   中断不能を成功へ変換しないことを検証した。結果は
   [実Asyncランタイム接続の結果](./websocket-async-executor-results.md)。
-  **残り**: 実TCP(`Socket.Client`)への配線と`serveUpgradableConnection`接続ループへの
-  組み込み、通常HTTPとupgradeの終了契約の同一適用、shutdown時の保留recvの実証。
-  HTTP/2はこの段階の合格に含めない。
+  さらに実TCPのloopback socket対で能力プローブを実測し
+  （[依存先契約C8](./websocket-dependency-contracts.md)）、shutdown時の保留recvの扱いを確認:
+  gracefulはピア協力で解決し追加能力不要、abort経路に中断能力はなく、
+  保持責務が維持されることを実TCPで確認。graceful全経路も実TCPで完走・再生一致
+  （[TcpBackendTests](../../LeanWebStudy/TcpBackendTests.lean)）。
+  **残り**: `serveUpgradableConnection`接続ループへの組み込み、
+  通常HTTPとupgradeの終了契約の同一適用。HTTP/2はこの段階の合格に含めない。
 - [ ] **closeの反例を記録する (必要な場合のみ)**: 既存closeを変えないと具体的な要件を満たせない
   履歴が見つかった場合、その最小反例と代替案を示してからD6を再検討する。
   第1スライスでは既存closeを変える必要のある反例は見つかっていない。
