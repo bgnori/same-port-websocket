@@ -56,7 +56,7 @@ close code echo・受信容量計上、`Upgraded`への能力公開の是非で�
 | 設計根拠 | [三つのモデル比較](./websocket-model-proposals.md) | B+Cを選んだ理由と代替案 |
 | 依存先確認 | [依存先契約](./websocket-dependency-contracts.md) | Std・native・libuvの証拠、仮定、未保証範囲 |
 | 独立化準備 | [互換性テストの外部ツール調査](./websocket-conformance-tools.md) | Autobahn以外の候補の調査・採否と、独立後のテスト構成 |
-| 独立化準備 | [独立リポジトリ化計画](./websocket-separation-plan.md) | 分離の範囲・新repo構成・CI・移行手順・未決事項・完了条件 |
+| 独立化準備 | [独立リポジトリ化計画](./websocket-separation-plan.md) | 分離の範囲・新repo構成・CI・移行手順・決定事項・完了条件 |
 | 経緯 | [初期実装評価](./websocket-evaluation.md) | 初期評価と追補。現在の全体状態の代用にはしない |
 
 API・動作契約の合意は「動作方針」、検証結果は「試作結果」、

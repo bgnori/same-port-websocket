@@ -3,8 +3,8 @@
 所属: [Std拡張WebSocket開発](./README.md)。
 [README「将来の独立化」](./README.md)の確認項目と
 [互換性テスト外部ツール調査](./websocket-conformance-tools.md)を前提に、
-分離の範囲・手順・完了条件を定める計画書。2026-11-03作成。
-**本書は計画であり、分離は未実施。** 未決事項は6節に明示し、決定済みとして扱わない。
+分離の範囲・手順・完了条件を定める計画書。2026-11-03作成、同日6節の5項目を決定。
+**本書は計画であり、分離は未実施。** 着手条件は満たされている。
 
 ## 1. 目的と方針
 
@@ -22,7 +22,7 @@
 ## 2. 新リポジトリの構成
 
 ```
-<new-repo>/
+same-port-websocket/
   lean-toolchain            # leanprover/lean4:v4.35.0（Studyと同一から開始）
   lakefile.lean             # 下記
   StdExt.lean               # 現行のまま（ルートdoc）
@@ -41,14 +41,14 @@
   tools/autobahn/{fuzzingclient.json, fuzzingclient-full.json, README.md}
   docs/                     # 現docs/std-websocket/の全文書
   .github/workflows/ci.yml
-  LICENSE                   # 未決（6節）
+  LICENSE                   # Apache-2.0（6節C）
   README.md                 # 現docs/std-websocket/README.mdを入口に再構成
 ```
 
 lakefileの骨子（Studyのsqlite/chat関連・外部requireはすべて不要）:
 
 ```lean
-package «<name>» where
+package «same-port-websocket» where
   version := v!"0.1.0"
 
 lean_lib StdExt
@@ -89,7 +89,7 @@ Python側の変更は起動コマンドの定数のみ（`ROOT/.lake/build/bin/w
 履歴の扱い: `git filter-repo`（または`git subtree split`）で
 `StdExt/ docs/std-websocket/ tests/test_ws_autobahn.py tools/autobahn/`のパス履歴を
 抽出して新repoの初期履歴とする。履歴抽出が難しければ、初期コミットに本計画と
-Study側の最終コミットハッシュを記録する形でも可とする（未決B）。
+Study側の最終コミットハッシュを記録する形でも可とする（6節B）。
 
 ## 4. 新リポジトリのCI設計
 
@@ -105,16 +105,18 @@ Study側の最終コミットハッシュを記録する形でも可とする（
 
 ## 5. 移行手順（各段に検証ゲート）
 
-1. **新repo作成と骨格**: 空repo＋`lean-toolchain`＋lakefile＋LICENSE（未決A・C確定後）。
+1. **新repo作成と骨格**: 空repo（`bgnori/same-port-websocket`）＋`lean-toolchain`＋
+   lakefile＋LICENSE（Apache-2.0）。
    ゲート: `lake build`が空ライブラリで通る。
-2. **ソース移設**: `StdExt/`と`StdExt.lean`を履歴ごと移す（未決B）。
+2. **ソース移設**: `StdExt/`と`StdExt.lean`を履歴ごと移す（6節B）。
    ゲート: `lake build StdExt`成功。
 3. **テスト移設**: Leanテスト（`Tests/`）とPythonテスト・`wsecho`実装。
    ゲート: `lake test`と`python3 -m unittest discover -s tests -p 'test_ws_*.py'`が全通過。
 4. **CI整備**: 4節のworkflow。ゲート: 4ジョブ全緑。autobahn-fullのレポートで
    9.x大型ケースのPassを確認（初のフル実行結果を`docs/`に記録する）。
 5. **docs移設**: 文書とリンク付け替え。ゲート: リンク検査スクリプト全通過。
-6. **Study側の切り替え**: lakefileへ`require <name> from git "<url>" @ "<commit>"`を追加し、
+6. **Study側の切り替え**: lakefileへ
+   `require «same-port-websocket» from git "<url>" @ "<commit>"`を追加し、
    `StdExt/`・WSテスト・`tools/autobahn/`・`docs/std-websocket/`本文を削除、
    入口READMEを残す。ゲート: Studyの`lake build`・`lake test`・
    `python3 -m unittest discover -s tests -p 'test_ws_std.py'`（/ws-echo回帰）・
@@ -125,15 +127,17 @@ Study側の最終コミットハッシュを記録する形でも可とする（
 手順2〜5の間、Study側の`StdExt`へ変更が必要になった場合は移行を中断して
 Study側へ先に入れ、手順2からやり直す（二重管理を作らない）。
 
-## 6. 未決事項（分離実施前に決める）
+## 6. 決定事項（2026-11-03 承認済み）
 
-| ID | 事項 | 案 |
-|---|---|---|
-| A | リポジトリ名・パッケージ名 | 案: `lean-std-websocket`（lib名は`StdExt`のまま）。`std`を冠する是非は本家への提案文脈で誤解を生まないか確認する |
-| B | 履歴の抽出方法 | 案: `git filter-repo --path StdExt --path docs/std-websocket --path tests/test_ws_autobahn.py --path tools/autobahn`。抽出失敗時はスナップショット初期化＋出所コミット記録 |
-| C | ライセンス | Studyには現在LICENSEが無い。本家提案を見据えるならLeanと同じApache-2.0が自然。**新repo作成前に必須** |
-| D | 置き場所 | 案: 同一オーナー（bgnori）配下 |
-| E | Study側docsの残し方 | 案: `docs/std-websocket/README.md`のみ残し移転先を案内。経緯（application-study）はStudyに残るため、相互リンクで辿れるようにする |
+当初の未決A〜Eは以下のとおり決定した。
+
+| ID | 事項 | 決定 | 根拠 |
+|---|---|---|---|
+| A | リポジトリ名 | **`same-port-websocket`**（lib名・名前空間は`StdExt`のまま） | 名前空間・ファイル名は本家マージを目指す都合上`StdExt`で必然であり、他実装（ws-lean等は別ポートで自前サーバーを立てる）との差異を一言で示せる場はリポジトリ名だけ。最大の特徴である「HTTPと同一ポートで、サーバー所有の接続をUpgradeで引き渡して使い回す」ことを利用者目線で名乗る |
+| B | 履歴の抽出方法 | **`git filter-repo`** で `--path StdExt --path docs/std-websocket --path tests/test_ws_autobahn.py --path tools/autobahn` の履歴を抽出。失敗時はスナップショット初期化＋出所コミット記録へフォールバック | 約55コミットからWS関連の経緯を保全できる |
+| C | ライセンス | **Apache-2.0** | Lean本家・Stdと同一。upstream提案時の摩擦が最小 |
+| D | 置き場所 | **bgnori配下**（`bgnori/same-port-websocket`） | 既存依存（MapleSQL等）と同じ運用 |
+| E | Study側docsの残し方 | **入口READMEのみ残す**（移転先案内とapplication-study経緯への逆リンク） | 「同じ議論を複数文書へコピーしない」既存方針と整合 |
 
 ## 7. 完了条件
 
@@ -144,4 +148,5 @@ Study側へ先に入れ、手順2からやり直す（二重管理を作らな�
 - [試作結果のチェックリスト](./websocket-prototype-results.md)等、進行中の台帳の
   正本が新repo側であることが宣言されている。
 
-この計画の実施自体は、未決A〜Cの決定後に着手する。
+6節の決定により着手条件は満たされている。最初の外部アクションは
+`bgnori/same-port-websocket` の空リポジトリ作成（GitHub上の操作）である。
