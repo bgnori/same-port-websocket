@@ -8,6 +8,23 @@ inductive Outcome where
   | failed
   deriving Repr, BEq, DecidableEq
 
+/--
+How a read operation completed. Unlike the earlier ID-recovery-only model,
+data, orderly EOF, cancellation, and failure are distinct events: late data is
+not delivered to a stopping session, EOF is not confused with the Close
+exchange, and a failure is backend trouble that stops outbound work.
+-/
+inductive ReadOutcome where
+  /-- Payload bytes arrived and are handed to the frame layer. -/
+  | data (bytes : Nat)
+  /-- The peer ended the inbound direction (EOF). Not a Close exchange. -/
+  | eof
+  /-- The read was abandoned after a stop (abort, deadline, failure). -/
+  | cancelled
+  /-- The backend reported a read failure. -/
+  | failed
+  deriving Repr, BEq, DecidableEq
+
 inductive WriteKind where
   | data (requestId bytes : Nat)
   | close
@@ -45,6 +62,8 @@ structure State where
   peerClosed : Bool := false
   backendEnded : Bool := false
   released : Bool := false
+  /-- The inbound direction ended (EOF); no further read can start. -/
+  recvEnded : Bool := false
   nextId : Nat := 0
   queue : List (Nat × Nat) := []
   reserved : Option Write := none
@@ -64,7 +83,7 @@ inductive Event where
   | start (id : Nat)
   | writeDone (id : Nat) (outcome : Outcome)
   | beginRead
-  | readDone (id : Nat)
+  | readDone (id : Nat) (outcome : ReadOutcome)
   /-- The executor registered a reserved control operation with the backend. -/
   | controlStart (id : Nat)
   /-- The backend completed a control operation, or the executor withdrew an
@@ -83,6 +102,8 @@ inductive Effect where
   | result (id : Nat) (outcome : Outcome)
   | write (operation : Write)
   | read (id : Nat)
+  /-- Inbound payload handed to the frame layer for parsing and delivery. -/
+  | deliver (id : Nat) (bytes : Nat)
   /-- A control operation was reserved; the executor must register and
   complete it. Release is refused while it is outstanding. -/
   | control (id : Nat) (kind : ControlKind)
@@ -229,12 +250,25 @@ def step (limits : Limits) (s : State) (event : Event) :
       return (s, effects ++ more)
     return (s, effects)
   | .beginRead =>
-    if s.stopping || s.backendEnded || s.released then throw .closed
+    if s.stopping || s.backendEnded || s.recvEnded || s.released then throw .closed
     if s.reading.isSome then throw .busy
     return ({ s with nextId := s.nextId + 1, reading := some s.nextId }, [.read s.nextId])
-  | .readDone id =>
+  | .readDone id outcome =>
     if s.reading != some id then throw .invalidEvent
-    return ({ s with reading := none }, [])
+    let s := { s with reading := none }
+    match outcome with
+    | .data bytes =>
+      -- A stopping session does not deliver late data to the application.
+      if s.stopping then return (s, [])
+      return (s, [.deliver id bytes])
+    | .eof =>
+      return ({ s with recvEnded := true }, [])
+    | .cancelled =>
+      if !s.stopping then throw .invalidEvent
+      return (s, [])
+    | .failed =>
+      -- Backend trouble: cancel unstarted outbound work and request an abort.
+      return stop s
   | .controlStart id =>
     let some c := s.controls.find? (·.id == id) | throw .invalidEvent
     if c.started then throw .invalidEvent

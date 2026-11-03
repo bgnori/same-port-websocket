@@ -189,24 +189,27 @@ def beginRead (s : Session) (maxBytes : UInt64 := 16384) :
     return .ok id
 
 /--
-Awaits the in-flight read. EOF (and, in this slice, read errors) are reported
-as `none` and also recorded as the backend ending. Distinguishing data, EOF,
-cancellation and failure per event remains a documented simplification.
+Awaits the in-flight read and feeds its distinct completion to the model:
+payload data (delivered to the caller), EOF, or — when the task failed —
+cancellation (while stopping) or failure. EOF no longer implies the backend
+ended; the owner reports that separately via `backendEnded`.
 -/
 def awaitRead (s : Session) : Async (Except Error (Option ByteArray)) := do
   let st ← s.ref.get
   let some (id, task) := st.readTask | return .error .invalidEvent
-  let data ← try EAsync.await task catch _ => pure none
-  match ← s.stepRecord (.readDone id) with
+  let result ← try
+    pure (Sum.inl (← EAsync.await task))
+  catch e => pure (Sum.inr e)
+  let stopping := (← s.ref.get).model.stopping
+  let (outcome, data) : ReadOutcome × Option ByteArray := match result with
+    | .inl (some bytes) => (.data bytes.size, some bytes)
+    | .inl none => (.eof, none)
+    | .inr _ => (if stopping then .cancelled else .failed, none)
+  match ← s.stepRecord (.readDone id outcome) with
   | .error e => return .error e
   | .ok _ =>
     s.ref.modify fun st => { st with readTask := none }
-    if data.isNone then
-      match ← s.stepRecord .backendDone with
-      | .error e => return .error e
-      | .ok _ => return .ok none
-    else
-      return .ok data
+    return .ok data
 
 /--
 Registers and executes the first reserved control operation. The control is

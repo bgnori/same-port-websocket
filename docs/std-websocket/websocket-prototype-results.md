@@ -328,8 +328,12 @@ graceful closeで受理済みsendの排出を試みても、それは送信成�
   selector化したreadはabortでピア協力なしに速やかに回収できbusyは恒久化しない。
   graceful全経路も実TCPで完走・再生一致
   （[TcpBackendTests](../../LeanWebStudy/TcpBackendTests.lean)）。
+  加えてread完了をdata/EOF/取消/失敗へ分化し、フレーム層をSessionへ接続した
+  （ピアCloseのフレーム解析からの発火、Pingの同一送信経路での自動応答。
+  [実Async接続の結果7節](./websocket-async-executor-results.md)）。
   **残り**: `serveUpgradableConnection`接続ループへの組み込み、
-  通常HTTPとupgradeの終了契約の同一適用。HTTP/2はこの段階の合格に含めない。
+  通常HTTPとupgradeの終了契約の同一適用、分割メッセージ・close code echo・
+  受信容量計上。HTTP/2はこの段階の合格に含めない。
 - [ ] **closeの反例を記録する (必要な場合のみ)**: 既存closeを変えないと具体的な要件を満たせない
   履歴が見つかった場合、その最小反例と代替案を示してからD6を再検討する。
   第1スライスでは既存closeを変える必要のある反例は見つかっていない。

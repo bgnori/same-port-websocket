@@ -62,6 +62,8 @@ structure Executor where
   delivered : List (Nat × Outcome) := []
   /-- Results confirmed after the waiter disappeared; still retained. -/
   orphaned : List (Nat × Outcome) := []
+  /-- Inbound payloads delivered to the frame layer, in order. -/
+  inbox : List (Nat × Nat) := []
   /-- The next registration throws synchronously (uv_write-style failure). -/
   registrationFault : Bool := false
   /-- Write whose registration just failed; its `.failed` completion is owed. -/
@@ -90,8 +92,8 @@ inductive Command where
   /-- Backend write completion callback. -/
   | completeWrite (outcome : Outcome)
   | beginRead
-  /-- Backend read completion callback. -/
-  | completeRead
+  /-- Backend read completion callback (data, EOF, cancellation, failure). -/
+  | completeRead (outcome : ReadOutcome)
   | peerClose
   | deadline
   | abortSession
@@ -146,6 +148,8 @@ private def applyEffect (ex : Executor) : Effect → Except Failure Executor
         wireLog := ex.backend.wireLog ++ [w] } }
   | .read id =>
     pure { ex with backend := { ex.backend with reads := ex.backend.reads ++ [id] } }
+  | .deliver id bytes =>
+    pure { ex with inbox := ex.inbox ++ [(id, bytes)] }
   | .control id kind =>
     pure { ex with pendingControls := ex.pendingControls ++ [{ id := id, kind := kind }] }
   | .releaseOwned =>
@@ -209,11 +213,14 @@ def exec (limits : Limits) (ex : Executor) : Command → Except Failure Executor
       let ex ← runCallback limits ex (.writeDone w.id outcome)
       pure { ex with backend := { ex.backend with writes := rest } }
   | .beginRead => runEvent limits ex .beginRead
-  | .completeRead => do
+  | .completeRead outcome => do
     match ex.backend.reads with
     | [] => throw (.invalid "no registered read")
     | id :: rest =>
-      let ex ← runCallback limits ex (.readDone id)
+      -- The mock backend never cancels a read unprompted.
+      if outcome == .cancelled && !ex.model.stopping then
+        throw (.rejected .invalidEvent)
+      let ex ← runCallback limits ex (.readDone id outcome)
       pure { ex with backend := { ex.backend with reads := rest } }
   | .peerClose => runEvent limits ex .peerClose
   | .deadline => runEvent limits ex .deadline

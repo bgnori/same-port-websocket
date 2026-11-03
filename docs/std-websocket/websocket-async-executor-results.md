@@ -120,3 +120,26 @@ release後のセッションは全イベントを拒否する。
 通常HTTPとupgradeへの同一終了契約の適用検証である。
 接続ループ組み込みでは読み待ちをselector経由にすること(abort回収の前提)とし、
 shutdown通知をcancel channel相当に配線する。HTTP/2は別adapterとして後続で検証する。
+
+## 7. 追補（2026-11-03）: readイベントの分化とフレーム層接続
+
+試作結果4節の義務「readDoneはID回収だけ → データ、正常EOF、取消、失敗を別Eventへ分け、
+フレーム解析・配送と接続する」を実装した。
+
+- **モデル**: `readDone id outcome`（`ReadOutcome := data bytes | eof | cancelled | failed`）。
+  dataは`.deliver`効果でフレーム層へ渡すが、**停止中のセッションは遅延データを配送しない**。
+  eofは受信方向の終端（`recvEnded`、以後のbeginRead拒否）であり、Close交換とも
+  backend全体の終了（`backendDone`）とも区別する。cancelledは停止中のみ合法。
+  failedはwrite失敗と同様にbackend障害として停止・abort予約を引き起こす。
+  既存の7定理（終端性・write排他保存を含む）は変更後も成立する。
+- **フレーム層接続**: [FrameAdapter](../../StdExt/Http/WebSocket/FrameAdapter.lean)が
+  sans-I/Oフレーム層をSessionに接続する。**ピアCloseはフレーム解析結果から`peerClose`を
+  発火**（従来はテストが手で注入）、**Ping自動応答のPongはアプリデータと同一の直列化
+  送信経路に合流**するため、D3のClose順序契約が制御応答にも及ぶ。
+- **検証**: [FrameAdapterTests](../../LeanWebStudy/FrameAdapterTests.lean)が実TCP上で
+  マスク付きクライアントとしてecho・Ping→Pong・Closeハンドシェイク・半閉鎖・EOFを駆動し、
+  記録履歴の純粋モデル再生一致を確認。モデル探索は読み完了4種を加えて25,129ノード、
+  モック実行器探索は45,318ノード。
+- **このスライスの簡略化**: 分割メッセージ（fragmentation）は非対応で明示エラー、
+  Close応答は固定フレーム（ピアのclose codeをechoしない）、Pong対応付けなし、
+  受信payloadの容量計上なし。いずれも接続ループ組み込みまでに扱う。

@@ -25,6 +25,7 @@ Std拡張として実装・検証する。
 | 段階B（2026-11-03） | 制御操作（abort・finishSend）を予約・登録・完了・保持の台帳へ拡張。D4初期値を決定。Effectだけを実行する決定的モック実行器が、登録失敗・完了順入替え・待機者消失・半閉鎖/取消待ちを再現し、27コマンド・深さ5・37,305ノードで実行器とモデルの対応を検査 |
 | 段階C第1スライス（2026-11-03） | 純粋モデルを実`Std.Async`ランタイムとStd付属mock transportに接続。backend能力をLean Std TCP/libuvの実契約に限定（D1・D5）し、中断不能を成功へ変換しないことを確認。graceful close・write失敗・deadline＋保留readの3シナリオで、実行履歴がモデルへ再生一致 |
 | 段階C第2スライス（2026-11-03） | 実TCP(loopback)で能力プローブを実測（依存先契約C8）: ピア半閉鎖で保留recvがEOF解決、素の`recv?`は中断不能で保持責務を維持、**selector化したreadはabortでピア協力なしに速やかに回収できbusyは恒久化しない**、graceful全経路が実TCPで完走し履歴がモデルへ再生一致 |
+| 段階C第3スライス（2026-11-03） | read完了をdata/EOF/取消/失敗に分化（停止中は遅延データを配送しない）。フレーム層をSessionへ接続: ピアCloseがフレーム解析から`peerClose`を発火、Ping自動応答は同一直列化送信経路に合流。実TCP上のecho・Pong・Closeハンドシェイクが履歴のモデル再生一致 |
 | まだ未接続 | 接続ループ(`serveUpgradableConnection`)への配線は未着手。既存公開APIは未変更 |
 | 保留 | 公開終了API、接続ループ組み込み、HTTP/2接続、結果一意性・容量の帰納的保存証明、並行send向けの受理点実装 |
 | 未保証 | native全体の安全性、無条件の有界資源回収、HTTP/2実装全体の適合 |
@@ -69,10 +70,12 @@ ws-leanと他言語の主要実装を同程度の補完資料とする。
 - [Lifecycle](../../StdExt/Http/WebSocket/Lifecycle.lean)：通信経路に未接続の試作。制御操作台帳と補題を含む。
 - [MockExecutor](../../StdExt/Http/WebSocket/MockExecutor.lean)：Effectだけを実行する決定的モック実行器（段階B）。
 - [AsyncExecutor](../../StdExt/Http/WebSocket/AsyncExecutor.lean)：実`Std.Async`でモデルを駆動するセッション（段階C第1スライス）。
+- [FrameAdapter](../../StdExt/Http/WebSocket/FrameAdapter.lean)：フレーム解析・自動Pong・Close検出をSessionへ接続（段階C第3スライス）。
 - [LifecycleTests](../../LeanWebStudy/LifecycleTests.lean)：決定的なモデル入力と探索。
 - [MockExecutorTests](../../LeanWebStudy/MockExecutorTests.lean)：実行器の決定的シナリオと対応関係の探索。
 - [AsyncExecutorTests](../../LeanWebStudy/AsyncExecutorTests.lean)：mock transport上のセッションとモデル再生の検証。
 - [TcpBackendTests](../../LeanWebStudy/TcpBackendTests.lean)：実TCPの能力プローブと実TCPセッション（段階C第2スライス）。
+- [FrameAdapterTests](../../LeanWebStudy/FrameAdapterTests.lean)：実TCP上のecho・自動Pong・Closeハンドシェイク（段階C第3スライス）。
 - [Leanテスト入口](../../LeanWebStudyTests.lean)：アプリのテストと実行単位を共有。
 - [通信テスト](../../tests/test_ws_std.py)：現行echo経路の検証。純粋モデルの適合証明ではない。
 
