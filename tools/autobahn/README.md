@@ -34,3 +34,7 @@ The `exclude-cases` above are a size *policy*, not a protocol gap: the 1 MiB
 boundary itself is covered (case 9.1.3/9.2.3 at exactly 1 MiB pass, and
 `tests/test_ws_autobahn.py` additionally asserts the `1009` close for one byte
 over the limit).
+
+For the survey of other external conformance tools and the plan for the
+standalone repository's CI (full Autobahn runs under GitHub Actions), see
+[docs/std-websocket/websocket-conformance-tools.md](../../docs/std-websocket/websocket-conformance-tools.md).

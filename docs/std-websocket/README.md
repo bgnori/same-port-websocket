@@ -55,6 +55,7 @@ close code echo・受信容量計上、`Upgraded`への能力公開の是非で�
 | 設計根拠 | [終了・寿命管理](./websocket-lifetime-design.md) | 問題定義、目標定理、安全性と進行性 |
 | 設計根拠 | [三つのモデル比較](./websocket-model-proposals.md) | B+Cを選んだ理由と代替案 |
 | 依存先確認 | [依存先契約](./websocket-dependency-contracts.md) | Std・native・libuvの証拠、仮定、未保証範囲 |
+| 独立化準備 | [互換性テストの外部ツール調査](./websocket-conformance-tools.md) | Autobahn以外の候補の調査・採否と、独立後のテスト構成 |
 | 経緯 | [初期実装評価](./websocket-evaluation.md) | 初期評価と追補。現在の全体状態の代用にはしない |
 
 API・動作契約の合意は「動作方針」、検証結果は「試作結果」、
@@ -96,7 +97,13 @@ lake test
 その前に確認する項目:
 
 1. Studyの画面・SQLite・native chat等から独立した依存・ビルド・テストに切り出せること。
+   → 準備済み（2026-11-03）: `StdExt`のimportはStdと自前モジュールのみで、
+   MapleSQL・lean-html・lithe・ws-lean・nativeコードへの依存はない。
+   テスト面の移設計画と外部互換性テストの採否は
+   [互換性テストの外部ツール調査](./websocket-conformance-tools.md)に整理した。
+   独立後CI（GitHub Actions）では本家Autobahn|TestsuiteをDockerでフル実行できる。
 2. 通常HTTPにも説明可能な終了契約とbackend能力差を明示し、実行器との対応を検証すること。
+   → 段階B〜Cで実施済み（終了契約の対応と`Upgraded`の能力差の記録を含む）。
 3. 接続ループの複製を本家へ持ち込むのではなく、必要なupgrade境界・共通変更を整理すること。
 4. 汎用のHTTP接続移譲、WebSocket層、寿命モデルを分け、何を本家へ提案するかを相談すること。
 5. HTTP/2とも矛盾しないscope、互換性、未保証範囲、保守・検証方法を示すこと。
