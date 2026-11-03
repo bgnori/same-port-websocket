@@ -270,6 +270,42 @@ HTTP/1の再利用終了とWebSocketのClose交換に固有の手順があるこ
 区別する。一方、「HTTPの方も強い保証がないからよい」として寿命問題を残す理由にもしない。
 共通の契約を満たすか、追加要件と能力差を明示できることが、実行器の設計確定の条件である。
 
+### 4.7 容量上限の初期値（D4）
+
+送信台帳の上限（未完了要求件数・保持payloadバイト数）の初期値を、
+大規模実験からではなく、既存実装の制限・既定値からの見積りとして定める。
+第6節の方針どおり他ライブラリの既定値をそのまま輸入せず、
+本拡張の既存設定と保持量の整合を判断基準にした。採用値は
+[Lifecycle.Limits.default](../../StdExt/Http/WebSocket/Lifecycle.lean)に実装している。
+
+調査した既定値（2026-11-03参照。設定名は各実装の公開文書による）:
+
+| 実装 | 件数系の既定値 | バイト系の既定値 |
+|---|---|---|
+| Lean Std `Channel`/`CloseableChannel` | `capacity := none`（無制限）[L1] | なし |
+| Python websockets | 受信`max_queue` 32 | 受信`max_size` 1 MiB、送受信バッファ`write_limit`/`read_limit` 64 KiB |
+| Node.js ws | なし（`bufferedAmount`で背圧を利用者へ委ねる） | 受信`maxPayload` 100 MiB |
+| gorilla/websocket (Go) | なし（単一writer契約） | I/Oバッファ既定 1〜4 KiB（メッセージ上限ではない） |
+| Jetty (Java) | なし | `maxTextMessageSize` 64 KiB |
+| tungstenite (Rust) | なし | `max_message_size` 既定は無制限（明示設定を推奨） |
+| 本拡張の現行 `Config` [L7] | なし | `maxFrameBytes`/`maxMessageBytes` 1 MiB |
+
+判断:
+
+- **未完了要求件数: 32**。送信台帳を有界に保つ目的に対し、無制限（Lean Std・ws・
+  tungstenite）は採用できない。明示的な件数既定を持つ先例はPython websocketsの
+  `max_queue` = 32（受信側だが同じ「ownerが処理するまでの保留数」）であり、
+  これを初期値として流用する。
+- **保持payload: 1 MiB**。本拡張の既存既定 `maxMessageBytes` = 1 MiB の
+  正当なメッセージ1件を常に受理できることを下限条件とし、それと一致する
+  Python websocketsの`max_size`と同値を初期値とする。64 KiB系（Jetty・
+  websocketsのバッファ）はこの下限を満たさず、100 MiB（ws）は
+  graceful close時の排出保持量として過大と判断した。
+
+これは運用実績が得られれば見直す初期値であり、最適値の主張ではない。
+フレーム符号化・制御用バッファ・受信配送を含む実メモリ予算の確認は
+別途必要である（[試作結果](./websocket-prototype-results.md)第4節）。
+
 ## 5. 合理的に実装できる範囲の線引き
 
 | 能力・性質 | 現時点の扱い |

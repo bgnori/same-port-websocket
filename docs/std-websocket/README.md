@@ -21,15 +21,17 @@ Std拡張として実装・検証する。
 | 修正・検証済み | Close理由のUTF-8切断を修正。既存のLean・通信テストの検証記録がある |
 | 採用した設計 | 単一owner、Bの直積状態・操作台帳 + Cの最小保持不変条件 |
 | 合意した動作原則 | 正常closeは受理済み列を排出。ピアClose・障害・abortは未着手取消。取消・期限をI/O停止・回収完了と混同しない。終了責任の分担（D2）とsend/closeの利用者向け意味論（D3）は2026-11-03に承認済み |
-| 純粋モデル試作 | 五つの局所補題、20件の入力列、深さ5・13,869ノードの探索。`lake test`成功 |
+| 純粋モデル試作 | 七つの局所補題（終端性・write排他の帰納的保存を含む）、30超の入力列、深さ5・20,020ノードの探索。`lake test`成功 |
+| 段階B（2026-11-03） | 制御操作（abort・finishSend）を予約・登録・完了・保持の台帳へ拡張。D4初期値を決定。Effectだけを実行する決定的モック実行器が、登録失敗・完了順入替え・待機者消失・半閉鎖/取消待ちを再現し、27コマンド・深さ5・37,305ノードで実行器とモデルの対応を検査 |
 | まだ未接続 | 純粋モデルは実通信経路で使用していない。現行のsend/close競合を解決済みとはしない |
-| 保留 | 公開終了API、承認済み契約の実装適合検証、backend能力の実証、一般の不変条件保存証明 |
+| 保留 | 公開終了API、backend能力の実証（段階C）、結果一意性・容量の帰納的保存証明 |
 | 未保証 | native全体の安全性、無条件の有界資源回収、HTTP/2実装全体の適合 |
 
-**終了責任（D2）とsend/close意味論（D3）は承認済みのため、次の作業は
-[チェックリストと判断台帳](./websocket-prototype-results.md#6-次段階の作業チェックリストと判断台帳)の
-承認済み契約に基づき、制御I/Oも含むモデルと非同期モック実行器（段階B）を実装すること。
-実TCPへ直結する段階ではない。**
+**段階B（制御I/Oを含むモデルと非同期モック実行器）は2026-11-03に実装済み。
+結果は[制御操作台帳とモック実行器の実装結果](./websocket-mock-executor-results.md)を参照。
+次の作業は[チェックリストと判断台帳](./websocket-prototype-results.md#6-次段階の作業チェックリストと判断台帳)に従い、
+D7の暫定合格条件を見直したうえでHTTP/1 backendへの接続（段階C）に進むこと。
+実TCPへ直結する前に、対象backendの終了・中断能力の確認（D1・D5）を先に行う。**
 
 ## 読む順序
 
@@ -38,6 +40,7 @@ Std拡張として実装・検証する。
 | 優先 | 文書 | 役割 |
 |---|---|---|
 | 1 | [試作結果とTransport接続条件](./websocket-prototype-results.md) | 何を試し、何が不足し、次に何を検証するか |
+| 1 | [段階B: 台帳とモック実行器の結果](./websocket-mock-executor-results.md) | 制御操作台帳・実行器の検証結果と、段階Cまでの残義務 |
 | 2 | [動作方針](./websocket-behavior-policy.md) | 合意・保留、利用者の期待、HTTP/Transport/connectionとの整合 |
 | 必要時 | [現行API・使い方](./std-websocket-extension.md) | 今動いているコードの構成。将来設計とは別 |
 | 設計根拠 | [終了・寿命管理](./websocket-lifetime-design.md) | 問題定義、目標定理、安全性と進行性 |
@@ -53,13 +56,15 @@ ws-leanと他言語の主要実装を同程度の補完資料とする。
 ## 実装・検証への入口
 
 - [StdExt](../../StdExt/)：現行upgrade・WebSocket実装と純粋モデル。
-- [Lifecycle](../../StdExt/Http/WebSocket/Lifecycle.lean)：通信経路に未接続の試作。
+- [Lifecycle](../../StdExt/Http/WebSocket/Lifecycle.lean)：通信経路に未接続の試作。制御操作台帳と補題を含む。
+- [MockExecutor](../../StdExt/Http/WebSocket/MockExecutor.lean)：Effectだけを実行する決定的モック実行器（段階B）。
 - [LifecycleTests](../../LeanWebStudy/LifecycleTests.lean)：決定的なモデル入力と探索。
+- [MockExecutorTests](../../LeanWebStudy/MockExecutorTests.lean)：実行器の決定的シナリオと対応関係の探索。
 - [Leanテスト入口](../../LeanWebStudyTests.lean)：アプリのテストと実行単位を共有。
 - [通信テスト](../../tests/test_ws_std.py)：現行echo経路の検証。純粋モデルの適合証明ではない。
 
 ```sh
-lake build LeanWebStudy.LifecycleTests
+lake build LeanWebStudy.LifecycleTests LeanWebStudy.MockExecutorTests
 lake test
 ```
 
