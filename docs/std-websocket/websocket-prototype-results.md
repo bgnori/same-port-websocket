@@ -188,36 +188,105 @@ HTTP/2は別adapterとして適合を検証し、共有接続への影響範囲�
 この節は、次の実装に入る前に判断漏れや前提の食い違いを防ぐための作業台帳である。
 契約の根拠は[動作方針](websocket-behavior-policy.md)、依存先の証拠は
 [依存先契約](websocket-dependency-contracts.md)を正とし、ここへ詳細を複製しない。
-以下の項目は未決であり、推奨案を採用済みの契約として扱わない。
+各項目の状態を明示し、未決の項目は推奨案を採用済みの契約として扱わない。
 
 ### 6.1 判断項目
 
-| ID | 決めること | 決めないと止まる作業 | 決定の記録先 |
+| ID | 状態 | 判断・決めること | 影響する作業 |
 |---|---|---|---|
-| D1 | 次段階の対象範囲。制御可能なmockまでか、特定のHTTP/1 backend接続までか。TCP・HTTP/2をどの段階に置くか | モックとadapterの設計、完了条件 | 本書と該当backendの検証記録 |
-| D2 | 通常HTTPとupgradeに共通する終了契約。各終了理由で誰がowner・保留I/O・body・Transportを回収するか | mockの終了イベントとrelease条件 | [動作方針 §4.6](websocket-behavior-policy.md) |
-| D3 | I/Oの受理・開始・backend登録の境界、およびデータ・Pong・Close・abort等の全I/Oを通す単一ownerの規則 | 実行器のイベント・Effect・台帳 | 本書とモデル/API文書 |
-| D4 | sendの受理点、受理後の取消、結果の確定・配送失敗時の責任、件数・byte上限と背圧 | 要求キュー、通知方式、容量テスト | [動作方針](websocket-behavior-policy.md)とモデル/API文書 |
-| D5 | 期限到来時に要求するbackend能力と、期限後も保留I/Oが残る場合の状態・報告 | timeout経路、abort・回収テスト、終了保証 | [動作方針](websocket-behavior-policy.md)とbackend別の契約 |
-| D6 | 公開`close`の戻りの意味、完了待機APIの要否、既存利用者との互換性 | 公開API確定と既存closeの変更 | [動作方針](websocket-behavior-policy.md) |
-| D7 | 次段階の合格条件。必要な不変条件、正常系履歴、探索・証明の範囲、backend能力の根拠 | モデル完了判定と実Transport接続への移行 | 本書とテスト |
+| D1 | 方針決定 | 次段階は制御可能なmockだけで終えず、特定のHTTP/1 backend接続まで進める。対象backendはLean Std TCP/libuvとし、HTTP/2はこの段階の対象外とする | mockとadapterの設計、完了条件 |
+| D2 | 契約案を整理・確認待ち | 終了理由ごとの回収主体は、開始済み処理を所有するsession ownerと、最終的なTransport後始末を行うHTTP connection/serverに分ける。各経路の対応案は6.2節 | mockの終了イベントとrelease条件 |
+| D3 | 契約案を整理・確認待ち | close後に既存sendの失敗が通知されることを許容する。closeは各sendの成功や失敗通知の処理完了を保証しない。受理点の候補と競合ルールは6.3節 | 実行器のイベント・Effect・台帳 |
+| D4 | 制約を決定 | 上限値は大規模実験から最適値を求めず、既存実装の制限・既定値から妥当な初期値を見積もる。値は運用実績が得られれば見直す。send受理・取消・結果の詳細契約は引き続き決める | 要求キュー、通知方式、容量テスト |
+| D5 | 制約を決定 | libuvとLean Std TCPで実装可能な能力だけを使う。特に、根拠のない強制中断や期限内回収は約束しない | timeout経路、abort・回収テスト、終了保証 |
+| D6 | 方針決定 | 既存`WebSocket.close`の意味を変えない。変更を再検討するのは、現行のままでは満たせない具体的な反例が示された場合に限る | 公開APIと互換性の検証 |
+| D7 | TBD | 次段階の合格条件は未定。対象backendの能力を確認した後、必要な不変条件・正常系履歴・検査範囲を定める | モデル完了判定と実Transport接続への移行 |
 
-### 6.2 依存順の進め方
+### 6.2 D2の整理: 終了理由ごとの回収責任
 
-- [ ] **範囲を固定する (D1)**: まず検証対象と対象外を明記する。TCP接続やHTTP/2適合を、
-  mock検証の成功だけから含意しない。
-- [ ] **終了契約を対応付ける (D2, D5)**: 通常HTTPとupgradeについて、正常EOF・例外・
-  キャンセル・期限切れごとに、開始停止、保留操作の完了／取消、所有資源の解放責任を記す。
-  backendが保証しない能力は未保証として残す。
-- [ ] **モデルの意味論を確定する (D3, D4)**: 受付、ownerによる受理、Effect生成、
-  backend登録、完了を区別する。制御I/Oも含む操作台帳、結果通知、背圧の対象を決める。
-- [ ] **mock実行器と合格条件を作る (D7)**: Effectを実行するdriverの履歴をモデルに対応付け、
+現行コードでは、`serveUpgradableConnection` が接続処理を所有し、HTTPループ後にrequest/response bodyを閉じ、
+upgrade継続の終了後に `Transport.close` を呼ぶ。サーバーshutdown時もTransport.close後に継続完了を待つ。
+一方、WebSocketは単独のsession ownerやsend queueを持たず、継続が作った子タスクもHTTP側では追跡しない。
+したがって下表は、現状の保証と次段階の責任分担案を分けて示す。
+
+| 終了理由 | 現行で起きること・制約 | 次段階での責任案 |
+|---|---|---|
+| handler/upgrade継続が正常return | HTTP接続処理が継続完了を観測し、最後にTransport.close。WebSocketの未追跡子タスクは残り得る | 継続がsession ownerをスコープ内に保持し、return前に新規受付を止め、開始済みI/Oとsession資源を回収する。HTTP connectionがbodyとTransportの後始末を行う |
+| アプリがローカルclose | `WebSocket.close` がClose frameを一度送る。アプリがrecvを続けるか継続をreturnする。sendとの直列化・残存I/O回収はない | session ownerが受付を失効し、合意したgraceful方針で既受理要求とCloseを処理する。書込失敗を成功に偽装せず、継続終了時はHTTP側へ所有sessionを返す |
+| ピアClose受信 | recvがCloseを検証し、closeSentを立てて応答を送る。応答失敗は握りつぶされ得る | session ownerが未着手データを取消し、応答writeの完了・失敗まで追跡する。結果確定後にsession終了をHTTP connectionへ返す |
+| プロトコル違反・recv/write例外 | protocol errorではClose送信を試みるが失敗を握りつぶして例外。upgrade継続例外はonFailureへ通知され、その後HTTP側がTransport.close | protocol/transport結果をsession ownerが終端結果として確定し、未着手要求を失敗または取消にする。開始済み操作のcallbackと保持を回収し、最後にHTTP connectionがTransportを後始末する |
+| 相手のEOF | recvはClose handshakeなしのEOFも`none`として返す。ハンドラがreturnすればHTTP側でTransport.close | EOFを正常Close交換と混同せず異常終了としてownerに渡す。未完了sendの失敗を確定し、session後始末後にHTTP側へ戻す |
+| サーバーshutdown/cancellation | connectionContextを選択した後、HTTP側がTransport.closeを呼んで継続完了を待つ。標準TCPのTransport.closeはno-opで、pending recvを確実に解除するとは限らない | HTTP connectionがshutdown理由をsession ownerへ通知し、ownerは新規受付を止めて回収可能な操作を処理する。libuv/Std TCPで完了を強制できないI/Oは保持責務を残し、静止・解放済みと報告しない。継続完了を待つ最終責任はHTTP connectionに残す |
+| HTTP通常経路のEOF/例外/timeout/shutdown | HTTP接続ループがbody streamを閉じ、接続処理後にTransport.close。通常request/responseにWebSocket sessionはない | body streamはHTTP connectionが閉じる。Transportの意味はupgrade経路と同じ契約表で扱い、WebSocket固有のsession処理を持ち込まない |
+
+この案では「誰が回収するか」は理由そのものから抽象的に割り当てるのではなく、
+**session操作を始めて保持しているownerがsessionのI/O・要求を回収し、HTTP connectionがhandler/body/Transportの境界を閉じる**
+という既存の所有階層から導く。Transport.closeがno-opであるbackendでは、それを強制中断や完了通知として使えない。
+従ってD2の責任分担は整理できたが、実装適合とshutdown時の保留recvの扱いはbackend接続時に検証が必要である。
+
+### 6.3 D3の整理: 「受理」と「開始」の境界
+
+ここでいうD3は、複数のsendとcloseが同時に呼ばれたとき、
+**どのsendを「もう引き受けた」と扱い、どのI/Oを実際に開始してよいかを決めること**である。
+API名や内部型名を先に選ぶ話ではない。
+
+たとえば、利用者がsendを呼んだ直後にcloseを呼ぶ場合、少なくとも次の段階は同じではない。
+
+1. 利用者がsendを呼び出す。
+2. send要求がownerへ届く（キュー待ちを含む）。
+3. ownerが要求を受理し、順序と結果を管理する責任を引き受ける。
+4. ownerがwriteを開始し、backend/libuvへ登録する。
+5. backendからwrite完了または失敗が通知される。
+
+現行`sendDataFrame`はcloseSentを確認した後に直接 `io.send` を呼ぶ。確認とwriteは原子的でなく、
+send queue・要求ID・結果台帳もない。したがって「send関数を呼び出した時点」を受理点にすると、
+closeとの競合や呼出側の待機キャンセルに対する順序を定義できない。また、libuvに登録したwriteは
+完了callback前にbufferを解放できず、`uv_cancel`で一般的なTCP writeを中断できるとも仮定できない。
+
+| 境界候補 | closeとの競合 | 既存実装・backendとの整合 |
+|---|---|---|
+| send関数の呼出開始 | 実行タスク間で呼出順を全順序化できず、closeが先にownerへ届く場合もsendが受理済みになり得る | 現行コードにはこの順序を記録するownerがない |
+| ownerが要求を台帳／有界queueへ記録した点 | この一点を線形化点にすれば、closeより前に記録済みの要求と、後着要求を区別できる | [動作方針 §4.1](websocket-behavior-policy.md)の既存案と整合。容量超過なら受理前に拒否できる |
+| backend write登録時 | 登録前は未受理とできるが、close・登録の同期が要る。登録後はcallbackまで要求bufferを保持する | libuv write callbackと寿命保持に対応する一方、close時点ですでにqueueにある要求の扱いが曖昧になる |
+| write完了時 | 成功が観測されるまで受理済みと呼ばずに済むが、closeの前後で状態が揺れ、送信中の資源保持とは別の状態になる | 受理と成功を同じ語にしてしまうため不適切。backend完了はピア受信確認ではない |
+
+**推奨するモデル上の区別（要確認）**: 受理点をownerが有界台帳へ記録した時点とし、
+要求の「受理」とwriteの「成功」を分ける。closeとsendが並行した場合はownerが直列化した順を採用する。
+closeが先に処理された後の新規sendは拒否し、close前に受理したsendはgraceful drainの対象にする。
+ただしdrain中の書込失敗はsend失敗として記録し、close自身の成功で覆い隠さない。
+すでにbackendへ登録されたwriteは、失敗・完了callbackを受け取るまで保持し、期限やshutdownを理由に
+完了したことにしない。この案なら「close後にsend失敗の通知が来る」ことを許容しながら、
+結果の帰属とbuffer保持を保てる。
+
+単一ownerは、この順序を一箇所で確定させる案である。データwriteだけでなく、
+受信に応じたPong・Close応答や下位終了操作も同じ経路に載せるなら、
+競合時の順序と保留中操作を一元的に追跡できる。一方、どの操作までowner管理に含めるか、
+ownerへの投入がブロックするか即時拒否か、送信失敗をどの既存`Async`呼出へ返すかは、
+まだ決定していない。
+
+現時点の方針として、closeの呼出し・復帰後に、先行するsendの失敗が判明・通知されることを許容する。
+graceful closeで受理済みsendの排出を試みても、それは送信成功の保証ではない。
+失敗したsendを成功扱いにせず結果として保持・通知する必要はあるが、ライブラリは
+利用者がその通知を実際に待ち、処理したことまでは保証できない。現行APIでもsendは`Async`の失敗となり得る。
+ただし、受理前のsendをclose後にどう拒否するか、失敗結果をどう確定・保持するかは未決である。
+
+この境界を明確にしてから、通常HTTPとupgradeで終了責任を照合し、
+mock実行器のイベント・Effect・テスト履歴へ落とし込む。
+
+### 6.3 依存順の進め方
+
+- [ ] **対象backendの契約を確認する (D1, D5)**: Lean Std TCP/libuvで実装できる終了・中断能力を
+  依存先契約と照合する。能力がない操作を仮定やsuccess-shaped fallbackで補わない。
+- [x] **終了責任の初回照合を記録する (D2)**: 6.2節の理由別対応をベースにし、backend接続で実証・修正する。
+- [ ] **send受理契約を確認する (D3, D4)**: 推奨線形化点、closeとの順序、結果の帰属を確認し、
+  既存実装から容量上限を見積もる。
+- [ ] **mock実行器を作る**: Effectを実行するdriverの履歴をモデルに対応付け、
   遅延・逆順完了、登録失敗、待機者消失、期限・取消、制御I/Oを決定的に再現する。
-  全到達状態の不変条件と必要な正常履歴を検査する。
-- [ ] **公開APIを決める (D6)**: 内部契約とmockの結果を根拠に、既存`close`の意味を保つか、
-  完了待機を追加するかを決める。APIの戻りをI/O静止や物理解放と誤認させない。
-- [ ] **次のbackendへ進む判断を記録する**: mockで満たした契約とbackend実装で確認できた能力を
-  照合する。通常HTTPとupgradeの双方を試し、HTTP/2はstreamと共有接続を分けて別途評価する。
+  全到達状態の不変条件と必要な正常履歴を検査する。D7の合格条件はこの結果を見て定める。
+- [ ] **HTTP/1 backendへ接続する**: mockの履歴とlibuvの実際の完了・失敗経路を照合する。
+  通常HTTPとupgrade双方の終了責任を確認し、HTTP/2はこの段階の合格に含めない。
+- [ ] **closeの反例を記録する (必要な場合のみ)**: 既存closeを変えないと具体的な要件を満たせない
+  履歴が見つかった場合、その最小反例と代替案を示してからD6を再検討する。
 
 各チェック項目は、判断と根拠を所定の記録先へ反映し、対応するテストまたは未保証事項を
 示してから完了にする。判断が実行可能性を変えた場合は、後続項目を確定する前に本台帳へ戻る。
