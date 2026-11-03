@@ -94,8 +94,9 @@ lake test
 成功した場合は独立プロジェクト化し、Lean本家へのPRを目指す。
 **独立化・PR作成・upstream受入れは、いずれも未実施**。
 単にファイルを移せば本家へ採用される、という見込みではない。
-分離の範囲・手順・未決事項は[独立リポジトリ化計画](./websocket-separation-plan.md)に定めた
-（2026-11-03。未決A〜Cの決定後に着手する）。
+分離の範囲・手順は[独立リポジトリ化計画](./websocket-separation-plan.md)に定めた。
+名称`same-port-websocket`・履歴抽出（filter-repo）・Apache-2.0・bgnori配下・
+入口READMEのみ残置、の5項目は2026-11-03に決定済みで、着手条件は満たされている。
 
 その前に確認する項目:
 
